@@ -29,4 +29,28 @@ class Habit {
   final int streak;
   final int xpReward;
   final List<bool> weeklyCompletions;
+
+  Habit copyWith({
+    String? id,
+    String? name,
+    String? category,
+    String? description,
+    String? frequency,
+    String? reminderTime,
+    int? streak,
+    int? xpReward,
+    List<bool>? weeklyCompletions,
+  }) {
+    return Habit(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      frequency: frequency ?? this.frequency,
+      reminderTime: reminderTime ?? this.reminderTime,
+      streak: streak ?? this.streak,
+      xpReward: xpReward ?? this.xpReward,
+      weeklyCompletions: weeklyCompletions ?? this.weeklyCompletions,
+    );
+  }
 }
