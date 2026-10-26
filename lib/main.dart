@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/app_shell.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -16,10 +16,7 @@ class HabitQuestApp extends StatelessWidget {
     return MaterialApp(
       title: 'HabitQuest',
       theme: AppTheme.light,
-      initialRoute: HomeScreen.routeName,
-      routes: {
-        HomeScreen.routeName: (context) => const HomeScreen(),
-      },
+      home: const AppShell(),
     );
   }
 }
