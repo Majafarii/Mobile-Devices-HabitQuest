@@ -1,30 +1,39 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:habitquest/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('HabitQuest opens on Home and switches between all tabs', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const HabitQuestApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(
+      find.descendant(of: find.byType(Center), matching: find.text('Home')),
+      findsOneWidget,
+    );
+    expect(find.byType(NavigationBar), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    final tabIcons = [
+      Icons.home_outlined,
+      Icons.insights_outlined,
+      Icons.emoji_events_outlined,
+      Icons.person_outline,
+    ];
+    final tabTitles = ['Home', 'Progress', 'Achievements', 'Profile'];
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    for (var index = 0; index < tabIcons.length; index++) {
+      await tester.tap(find.byIcon(tabIcons[index]));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(Center),
+          matching: find.text(tabTitles[index]),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(NavigationBar), findsOneWidget);
+    }
   });
 }
