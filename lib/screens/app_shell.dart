@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'achievements_screen.dart';
 import 'home_screen.dart';
 import 'progress_screen.dart';
 
@@ -33,6 +34,8 @@ class _AppShellState extends State<AppShell> {
           ? const HomeScreen()
           : _selectedIndex == 1
           ? const ProgressScreen()
+          : _selectedIndex == 2
+          ? const AchievementsScreen()
           : Center(
               child: Text(
                 selectedTab.title,

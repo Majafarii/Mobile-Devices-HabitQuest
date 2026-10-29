@@ -31,6 +31,9 @@ void main() {
       } else if (index == 1) {
         expect(find.text('1,250 total XP'), findsOneWidget);
         expect(find.text('Recent Completions'), findsOneWidget);
+      } else if (index == 2) {
+        expect(find.text('2 of 6 badges unlocked'), findsOneWidget);
+        expect(find.text('Perfect Week'), findsOneWidget);
       } else {
         expect(
           find.descendant(
