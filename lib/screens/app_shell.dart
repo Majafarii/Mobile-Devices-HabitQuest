@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'home_screen.dart';
+import 'progress_screen.dart';
 
 /// Owns the app's top-level tab selection and keeps navigation visible.
 class AppShell extends StatefulWidget {
@@ -30,6 +31,8 @@ class _AppShellState extends State<AppShell> {
           : AppBar(title: const Text('HabitQuest')),
       body: _selectedIndex == 0
           ? const HomeScreen()
+          : _selectedIndex == 1
+          ? const ProgressScreen()
           : Center(
               child: Text(
                 selectedTab.title,

@@ -28,6 +28,9 @@ void main() {
       if (index == 0) {
         expect(find.text("Today's Quests"), findsOneWidget);
         expect(find.text('Drink Water'), findsOneWidget);
+      } else if (index == 1) {
+        expect(find.text('1,250 total XP'), findsOneWidget);
+        expect(find.text('Recent Completions'), findsOneWidget);
       } else {
         expect(
           find.descendant(
