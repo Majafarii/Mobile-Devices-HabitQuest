@@ -1,16 +1,45 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'quest_detail_screen.dart';
 
 /// Home tab content populated with demo data until real habit data is connected.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   static const _habits = [
-    _QuestHabit(name: 'Drink Water', category: 'Wellness', streak: 3),
-    _QuestHabit(name: 'Study 1 Hour', category: 'Learning', streak: 5),
-    _QuestHabit(name: 'Morning Workout', category: 'Fitness', streak: 2),
-    _QuestHabit(name: 'Read 20 Minutes', category: 'Reading', streak: 7),
+    _QuestHabit(
+      name: 'Drink Water',
+      category: 'Wellness',
+      description:
+          'Keep a water bottle nearby and stay hydrated throughout the day.',
+      streak: 3,
+      weeklyCompletions: [true, true, false, true, true, false, true],
+    ),
+    _QuestHabit(
+      name: 'Study 1 Hour',
+      category: 'Learning',
+      description:
+          'Spend one focused hour reviewing coursework or class notes.',
+      streak: 5,
+      weeklyCompletions: [true, true, true, true, false, true, false],
+    ),
+    _QuestHabit(
+      name: 'Morning Workout',
+      category: 'Fitness',
+      description:
+          'Make time for a short workout to start the morning with energy.',
+      streak: 2,
+      weeklyCompletions: [false, true, true, false, true, false, false],
+    ),
+    _QuestHabit(
+      name: 'Read 20 Minutes',
+      category: 'Reading',
+      description:
+          'Read a book or other useful material for at least 20 minutes.',
+      streak: 7,
+      weeklyCompletions: [true, true, true, true, true, true, true],
+    ),
   ];
 
   @override
@@ -156,6 +185,20 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => QuestDetailScreen(
+                name: habit.name,
+                category: habit.category,
+                description: habit.description,
+                streak: habit.streak,
+                weeklyCompletions: habit.weeklyCompletions,
+              ),
+            ),
+          );
+        },
         title: Text(
           habit.name,
           style: textTheme.titleMedium?.copyWith(
@@ -199,10 +242,14 @@ class _QuestHabit {
   const _QuestHabit({
     required this.name,
     required this.category,
+    required this.description,
     required this.streak,
+    required this.weeklyCompletions,
   });
 
   final String name;
   final String category;
+  final String description;
   final int streak;
+  final List<bool> weeklyCompletions;
 }
