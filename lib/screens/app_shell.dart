@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'home_screen.dart';
+
 /// Owns the app's top-level tab selection and keeps navigation visible.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -23,13 +25,28 @@ class _AppShellState extends State<AppShell> {
     final selectedTab = _tabs[_selectedIndex];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('HabitQuest')),
-      body: Center(
-        child: Text(
-          selectedTab.title,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-      ),
+      appBar: _selectedIndex == 0
+          ? null
+          : AppBar(title: const Text('HabitQuest')),
+      body: _selectedIndex == 0
+          ? const HomeScreen()
+          : Center(
+              child: Text(
+                selectedTab.title,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Add Habit coming soon')),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Habit'),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -39,10 +56,7 @@ class _AppShellState extends State<AppShell> {
         },
         destinations: [
           for (final tab in _tabs)
-            NavigationDestination(
-              icon: Icon(tab.icon),
-              label: tab.title,
-            ),
+            NavigationDestination(icon: Icon(tab.icon), label: tab.title),
         ],
       ),
     );

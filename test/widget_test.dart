@@ -8,10 +8,9 @@ void main() {
   ) async {
     await tester.pumpWidget(const HabitQuestApp());
 
-    expect(
-      find.descendant(of: find.byType(Center), matching: find.text('Home')),
-      findsOneWidget,
-    );
+    expect(find.text('HabitQuest'), findsWidgets);
+    expect(find.text("Today's Quests"), findsOneWidget);
+    expect(find.text('Drink Water'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
 
     final tabIcons = [
@@ -26,13 +25,18 @@ void main() {
       await tester.tap(find.byIcon(tabIcons[index]));
       await tester.pumpAndSettle();
 
-      expect(
-        find.descendant(
-          of: find.byType(Center),
-          matching: find.text(tabTitles[index]),
-        ),
-        findsOneWidget,
-      );
+      if (index == 0) {
+        expect(find.text("Today's Quests"), findsOneWidget);
+        expect(find.text('Drink Water'), findsOneWidget);
+      } else {
+        expect(
+          find.descendant(
+            of: find.byType(Center),
+            matching: find.text(tabTitles[index]),
+          ),
+          findsOneWidget,
+        );
+      }
       expect(find.byType(NavigationBar), findsOneWidget);
     }
   });
