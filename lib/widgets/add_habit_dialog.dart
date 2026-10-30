@@ -14,12 +14,16 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _reminderTimeController = TextEditingController();
+  String _frequency = 'Daily';
+  TimeOfDay? _reminderTime;
   bool _showValidMessage = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _reminderTimeController.dispose();
     super.dispose();
   }
 
@@ -67,6 +71,41 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
                   ),
                   onChanged: (_) => _clearValidMessage(),
                 ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: _frequency,
+                  decoration: _fieldDecoration(
+                    context,
+                    label: 'Frequency',
+                    hint: 'Choose a frequency',
+                  ).copyWith(prefixIcon: const Icon(Icons.repeat_rounded)),
+                  items: const [
+                    DropdownMenuItem(value: 'Daily', child: Text('Daily')),
+                    DropdownMenuItem(value: 'Weekly', child: Text('Weekly')),
+                  ],
+                  onChanged: (frequency) {
+                    if (frequency == null) return;
+                    setState(() {
+                      _frequency = frequency;
+                      _showValidMessage = false;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _reminderTimeController,
+                  readOnly: true,
+                  onTap: _pickReminderTime,
+                  decoration:
+                      _fieldDecoration(
+                        context,
+                        label: 'Reminder Time',
+                        hint: 'Tap to choose a time',
+                      ).copyWith(
+                        prefixIcon: const Icon(Icons.access_time_rounded),
+                        suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
+                      ),
+                ),
                 if (_showValidMessage) ...[
                   const SizedBox(height: 14),
                   Container(
@@ -88,7 +127,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Looks good! Your habit details are valid.',
+                            _validDetailsMessage,
                             style: textTheme.bodySmall?.copyWith(
                               color: colors.onSurface,
                             ),
@@ -152,6 +191,30 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
         _showValidMessage = true;
       });
     }
+  }
+
+  Future<void> _pickReminderTime() async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime ?? TimeOfDay.now(),
+    );
+
+    if (pickedTime == null || !mounted) return;
+
+    setState(() {
+      _reminderTime = pickedTime;
+      _reminderTimeController.text = pickedTime.format(context);
+      _showValidMessage = false;
+    });
+  }
+
+  String get _validDetailsMessage {
+    final reminder = _reminderTimeController.text.isEmpty
+        ? 'not set'
+        : _reminderTimeController.text;
+
+    return 'Valid: ${_nameController.text.trim()}. '
+        'Frequency: $_frequency. Reminder: $reminder.';
   }
 
   void _clearValidMessage() {
