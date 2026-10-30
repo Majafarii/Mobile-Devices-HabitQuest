@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/add_habit_dialog.dart';
 import 'achievements_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -49,8 +50,9 @@ class _AppShellState extends State<AppShell> {
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Add Habit coming soon')),
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => const AddHabitDialog(),
                 );
               },
               icon: const Icon(Icons.add),
