@@ -55,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: ListView(
@@ -67,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Padding(
@@ -78,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(
                     'DEMO DATA',
                     style: textTheme.labelSmall?.copyWith(
-                      color: AppColors.secondaryText,
+                      color: colors.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -90,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'Build consistency, one quest at a time.',
             style: textTheme.bodyLarge?.copyWith(
-              color: AppColors.secondaryText,
+              color: colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 20),
@@ -109,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildProgressCard(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Card(
       child: Padding(
@@ -128,11 +130,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: const LinearProgressIndicator(
+              child: LinearProgressIndicator(
                 value: 0.69,
                 minHeight: 9,
                 color: AppColors.pink,
-                backgroundColor: Color(0xFFFFE5EB),
+                backgroundColor: colors.primaryContainer,
               ),
             ),
           ],
@@ -180,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final habit = HomeScreen._habits[index];
     final isCompleted = _completed[index];
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -203,9 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
           habit.name,
           style: textTheme.titleMedium?.copyWith(
             decoration: isCompleted ? TextDecoration.lineThrough : null,
-            color: isCompleted
-                ? AppColors.secondaryText
-                : AppColors.primaryText,
+            color: isCompleted ? colors.onSurfaceVariant : colors.onSurface,
           ),
         ),
         subtitle: Padding(

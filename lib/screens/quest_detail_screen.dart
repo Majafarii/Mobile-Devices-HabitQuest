@@ -24,6 +24,7 @@ class QuestDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -146,7 +147,7 @@ class QuestDetailScreen extends StatelessWidget {
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Delete Quest'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFE5EB),
+                  backgroundColor: colors.primaryContainer,
                   foregroundColor: AppColors.pink,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -162,7 +163,8 @@ class QuestDetailScreen extends StatelessWidget {
     final isComplete = index < weeklyCompletions.length
         ? weeklyCompletions[index]
         : false;
-    final color = isComplete ? AppColors.success : AppColors.secondaryText;
+    final colors = Theme.of(context).colorScheme;
+    final color = isComplete ? AppColors.success : colors.onSurfaceVariant;
 
     return Column(
       children: [
@@ -171,7 +173,7 @@ class QuestDetailScreen extends StatelessWidget {
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isComplete ? const Color(0xFFE8F8EC) : AppColors.background,
+            color: colors.surfaceContainerHighest,
             shape: BoxShape.circle,
           ),
           child: Icon(

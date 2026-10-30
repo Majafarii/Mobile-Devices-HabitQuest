@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'achievements_screen.dart';
 import 'home_screen.dart';
+import 'profile_screen.dart';
 import 'progress_screen.dart';
 
 /// Owns the app's top-level tab selection and keeps navigation visible.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({
+    super.key,
+    required this.isDarkMode,
+    required this.onDarkModeChanged,
+  });
+
+  final bool isDarkMode;
+  final ValueChanged<bool> onDarkModeChanged;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -24,8 +32,6 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedTab = _tabs[_selectedIndex];
-
     return Scaffold(
       appBar: _selectedIndex == 0
           ? null
@@ -36,11 +42,9 @@ class _AppShellState extends State<AppShell> {
           ? const ProgressScreen()
           : _selectedIndex == 2
           ? const AchievementsScreen()
-          : Center(
-              child: Text(
-                selectedTab.title,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
+          : ProfileScreen(
+              isDarkMode: widget.isDarkMode,
+              onDarkModeChanged: widget.onDarkModeChanged,
             ),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(

@@ -54,6 +54,7 @@ class AchievementsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: ListView(
@@ -64,7 +65,7 @@ class AchievementsScreen extends StatelessWidget {
           Text(
             'Earn badges by completing quests and building healthy habits.',
             style: textTheme.bodyLarge?.copyWith(
-              color: AppColors.secondaryText,
+              color: colors.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 20),
@@ -112,9 +113,10 @@ class AchievementsScreen extends StatelessWidget {
 
   Widget _buildAchievementCard(BuildContext context, _Achievement achievement) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
     final iconColor = achievement.isUnlocked
         ? achievement.color
-        : AppColors.secondaryText;
+        : colors.onSurfaceVariant;
 
     return Card(
       child: InkWell(
@@ -131,8 +133,8 @@ class AchievementsScreen extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: achievement.isUnlocked
-                      ? const Color(0xFFFFF0F4)
-                      : AppColors.background,
+                      ? colors.primaryContainer
+                      : colors.surfaceContainerHighest,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(achievement.icon, color: iconColor, size: 26),
@@ -162,7 +164,7 @@ class AchievementsScreen extends StatelessWidget {
                     size: 15,
                     color: achievement.isUnlocked
                         ? AppColors.success
-                        : AppColors.secondaryText,
+                        : colors.onSurfaceVariant,
                   ),
                   const SizedBox(width: 5),
                   Text(
@@ -170,7 +172,7 @@ class AchievementsScreen extends StatelessWidget {
                     style: textTheme.labelSmall?.copyWith(
                       color: achievement.isUnlocked
                           ? AppColors.success
-                          : AppColors.secondaryText,
+                          : colors.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

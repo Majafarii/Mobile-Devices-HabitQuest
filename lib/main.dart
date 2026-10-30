@@ -8,15 +8,31 @@ void main() {
 }
 
 /// The app entry point. Keep app-wide setup and navigation here.
-class HabitQuestApp extends StatelessWidget {
+class HabitQuestApp extends StatefulWidget {
   const HabitQuestApp({super.key});
+
+  @override
+  State<HabitQuestApp> createState() => _HabitQuestAppState();
+}
+
+class _HabitQuestAppState extends State<HabitQuestApp> {
+  bool _isDarkMode = false;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'HabitQuest',
       theme: AppTheme.light,
-      home: const AppShell(),
+      darkTheme: AppTheme.dark,
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      home: AppShell(
+        isDarkMode: _isDarkMode,
+        onDarkModeChanged: (isDarkMode) {
+          setState(() {
+            _isDarkMode = isDarkMode;
+          });
+        },
+      ),
     );
   }
 }

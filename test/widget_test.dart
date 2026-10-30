@@ -30,10 +30,35 @@ void main() {
         expect(find.text('Drink Water'), findsOneWidget);
       } else if (index == 1) {
         expect(find.text('1,250 total XP'), findsOneWidget);
-        expect(find.text('Recent Completions'), findsOneWidget);
+        expect(find.text('Level 4'), findsOneWidget);
       } else if (index == 2) {
         expect(find.text('2 of 6 badges unlocked'), findsOneWidget);
         expect(find.text('Perfect Week'), findsOneWidget);
+      } else if (index == 3) {
+        expect(find.text('Alex Morgan'), findsOneWidget);
+        expect(
+          find.text(
+            'Authentication and Firebase synchronization are not yet implemented.',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.drag(find.byType(ListView).last, const Offset(0, -450));
+        await tester.pumpAndSettle();
+        final darkThemeTile = find.widgetWithText(SwitchListTile, 'Dark theme');
+        await tester.tap(darkThemeTile);
+        await tester.pumpAndSettle();
+        expect(
+          Theme.of(tester.element(darkThemeTile)).brightness,
+          Brightness.dark,
+        );
+
+        await tester.tap(darkThemeTile);
+        await tester.pumpAndSettle();
+        expect(
+          Theme.of(tester.element(darkThemeTile)).brightness,
+          Brightness.light,
+        );
       } else {
         expect(
           find.descendant(

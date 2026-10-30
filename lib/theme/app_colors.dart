@@ -11,4 +11,10 @@ abstract final class AppColors {
   static const success = Color(0xFF34C759);
   static const information = Color(0xFF007AFF);
   static const streak = Color(0xFFFF9500);
+
+  static const darkBackground = Color(0xFF1C1C1E);
+  static const darkSurface = Color(0xFF2C2C2E);
+  static const darkPrimaryText = Color(0xFFF5F5F7);
+  static const darkSecondaryText = Color(0xFFA1A1A6);
+  static const darkPinkContainer = Color(0xFF4B1525);
 }

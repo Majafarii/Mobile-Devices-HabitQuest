@@ -25,6 +25,7 @@ class ProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: ListView(
@@ -39,7 +40,7 @@ class ProgressScreen extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -87,6 +88,7 @@ class ProgressScreen extends StatelessWidget {
 
   Widget _buildXpSummaryCard(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Card(
       child: Padding(
@@ -108,11 +110,11 @@ class ProgressScreen extends StatelessWidget {
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: const LinearProgressIndicator(
+              child: LinearProgressIndicator(
                 value: 0.69,
                 minHeight: 9,
                 color: AppColors.pink,
-                backgroundColor: Color(0xFFFFE5EB),
+                backgroundColor: colors.primaryContainer,
               ),
             ),
           ],
