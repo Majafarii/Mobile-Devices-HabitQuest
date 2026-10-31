@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../models/habit.dart';
 import '../theme/app_colors.dart';
 
 /// Shows demo details for the quest selected on the Home screen.
 class QuestDetailScreen extends StatelessWidget {
-  const QuestDetailScreen({
-    super.key,
-    required this.name,
-    required this.category,
-    required this.description,
-    required this.streak,
-    required this.weeklyCompletions,
-  });
+  const QuestDetailScreen({super.key, required this.habit});
 
-  final String name;
-  final String category;
-  final String description;
-  final int streak;
-  final List<bool> weeklyCompletions;
+  final Habit habit;
 
   static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -39,7 +29,7 @@ class QuestDetailScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text(name, style: textTheme.headlineLarge),
+            Text(habit.name, style: textTheme.headlineLarge),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -48,7 +38,7 @@ class QuestDetailScreen extends StatelessWidget {
                   color: AppColors.information,
                 ),
                 const SizedBox(width: 8),
-                Text(category, style: textTheme.bodyLarge),
+                Text(habit.category, style: textTheme.bodyLarge),
               ],
             ),
             const SizedBox(height: 20),
@@ -60,8 +50,25 @@ class QuestDetailScreen extends StatelessWidget {
                   children: [
                     Text('Description / Notes', style: textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    Text(description, style: textTheme.bodyLarge),
+                    Text(
+                      habit.description.isEmpty
+                          ? 'No notes added.'
+                          : habit.description,
+                      style: textTheme.bodyLarge,
+                    ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.repeat_rounded),
+                title: Text('${habit.frequency} quest'),
+                subtitle: Text(
+                  habit.reminderTime == null
+                      ? 'No reminder set'
+                      : 'Reminder at ${habit.reminderTime}',
                 ),
               ),
             ),
@@ -83,7 +90,10 @@ class QuestDetailScreen extends StatelessWidget {
                         children: [
                           Text('Current streak', style: textTheme.labelMedium),
                           const SizedBox(height: 3),
-                          Text('$streak days', style: textTheme.titleLarge),
+                          Text(
+                            '${habit.streak} days',
+                            style: textTheme.titleLarge,
+                          ),
                         ],
                       ),
                     ),
@@ -160,8 +170,8 @@ class QuestDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDayIndicator(BuildContext context, int index) {
-    final isComplete = index < weeklyCompletions.length
-        ? weeklyCompletions[index]
+    final isComplete = index < habit.weeklyCompletions.length
+        ? habit.weeklyCompletions[index]
         : false;
     final colors = Theme.of(context).colorScheme;
     final color = isComplete ? AppColors.success : colors.onSurfaceVariant;
