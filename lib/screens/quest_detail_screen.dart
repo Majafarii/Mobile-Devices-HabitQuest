@@ -2,14 +2,33 @@ import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
 import '../theme/app_colors.dart';
+import '../widgets/add_habit_dialog.dart';
 
 /// Shows demo details for the quest selected on the Home screen.
-class QuestDetailScreen extends StatelessWidget {
-  const QuestDetailScreen({super.key, required this.habit});
+class QuestDetailScreen extends StatefulWidget {
+  const QuestDetailScreen({
+    super.key,
+    required this.habit,
+    required this.onHabitUpdated,
+  });
 
   final Habit habit;
+  final ValueChanged<Habit> onHabitUpdated;
+
+  @override
+  State<QuestDetailScreen> createState() => _QuestDetailScreenState();
+}
+
+class _QuestDetailScreenState extends State<QuestDetailScreen> {
+  late Habit _habit;
 
   static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  @override
+  void initState() {
+    super.initState();
+    _habit = widget.habit;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +48,7 @@ class QuestDetailScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text(habit.name, style: textTheme.headlineLarge),
+            Text(_habit.name, style: textTheme.headlineLarge),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -38,7 +57,7 @@ class QuestDetailScreen extends StatelessWidget {
                   color: AppColors.information,
                 ),
                 const SizedBox(width: 8),
-                Text(habit.category, style: textTheme.bodyLarge),
+                Text(_habit.category, style: textTheme.bodyLarge),
               ],
             ),
             const SizedBox(height: 20),
@@ -51,9 +70,9 @@ class QuestDetailScreen extends StatelessWidget {
                     Text('Description / Notes', style: textTheme.titleMedium),
                     const SizedBox(height: 8),
                     Text(
-                      habit.description.isEmpty
+                      _habit.description.isEmpty
                           ? 'No notes added.'
-                          : habit.description,
+                          : _habit.description,
                       style: textTheme.bodyLarge,
                     ),
                   ],
@@ -64,11 +83,11 @@ class QuestDetailScreen extends StatelessWidget {
             Card(
               child: ListTile(
                 leading: const Icon(Icons.repeat_rounded),
-                title: Text('${habit.frequency} quest'),
+                title: Text('${_habit.frequency} quest'),
                 subtitle: Text(
-                  habit.reminderTime == null
+                  _habit.reminderTime == null
                       ? 'No reminder set'
-                      : 'Reminder at ${habit.reminderTime}',
+                      : 'Reminder at ${_habit.reminderTime}',
                 ),
               ),
             ),
@@ -91,7 +110,7 @@ class QuestDetailScreen extends StatelessWidget {
                           Text('Current streak', style: textTheme.labelMedium),
                           const SizedBox(height: 3),
                           Text(
-                            '${habit.streak} days',
+                            '${_habit.streak} days',
                             style: textTheme.titleLarge,
                           ),
                         ],
@@ -125,13 +144,7 @@ class QuestDetailScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Edit Quest will be available soon.'),
-                    ),
-                  );
-                },
+                onPressed: _editHabit,
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit Quest'),
                 style: ElevatedButton.styleFrom(
@@ -170,8 +183,8 @@ class QuestDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDayIndicator(BuildContext context, int index) {
-    final isComplete = index < habit.weeklyCompletions.length
-        ? habit.weeklyCompletions[index]
+    final isComplete = index < _habit.weeklyCompletions.length
+        ? _habit.weeklyCompletions[index]
         : false;
     final colors = Theme.of(context).colorScheme;
     final color = isComplete ? AppColors.success : colors.onSurfaceVariant;
@@ -196,5 +209,22 @@ class QuestDetailScreen extends StatelessWidget {
         Text(_dayLabels[index], style: Theme.of(context).textTheme.labelSmall),
       ],
     );
+  }
+
+  Future<void> _editHabit() async {
+    final updatedHabit = await showDialog<Habit>(
+      context: context,
+      builder: (context) => AddHabitDialog(habitToEdit: _habit),
+    );
+
+    if (!mounted) return;
+    if (updatedHabit == null) return;
+
+    setState(() {
+      _habit = updatedHabit;
+    });
+    widget.onHabitUpdated(updatedHabit);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Quest updated!')));
   }
 }

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
 
-/// Collects and validates demo habit details without saving them.
+/// Adds a habit or edits an existing one using the same form.
 class AddHabitDialog extends StatefulWidget {
-  const AddHabitDialog({super.key});
+  const AddHabitDialog({super.key, this.habitToEdit});
+
+  final Habit? habitToEdit;
 
   @override
   State<AddHabitDialog> createState() => _AddHabitDialogState();
@@ -12,11 +14,25 @@ class AddHabitDialog extends StatefulWidget {
 
 class _AddHabitDialogState extends State<AddHabitDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _reminderTimeController = TextEditingController();
-  String _frequency = 'Daily';
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _reminderTimeController;
+  late String _frequency;
   TimeOfDay? _reminderTime;
+
+  @override
+  void initState() {
+    super.initState();
+    final habit = widget.habitToEdit;
+    _nameController = TextEditingController(text: habit?.name ?? '');
+    _descriptionController = TextEditingController(
+      text: habit?.description ?? '',
+    );
+    _reminderTimeController = TextEditingController(
+      text: habit?.reminderTime ?? '',
+    );
+    _frequency = habit?.frequency ?? 'Daily';
+  }
 
   @override
   void dispose() {
@@ -29,7 +45,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add a Habit'),
+      title: Text(widget.habitToEdit == null ? 'Add a Habit' : 'Edit Quest'),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
@@ -109,7 +125,10 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(onPressed: _validateForm, child: const Text('Continue')),
+        ElevatedButton(
+          onPressed: _validateForm,
+          child: Text(widget.habitToEdit == null ? 'Continue' : 'Save Changes'),
+        ),
       ],
     );
   }
@@ -150,15 +169,21 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
   void _validateForm() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final originalHabit = widget.habitToEdit;
     Navigator.pop(
       context,
       Habit(
         name: _nameController.text.trim(),
+        category: originalHabit?.category ?? 'General',
         description: _descriptionController.text.trim(),
         frequency: _frequency,
-        reminderTime: _reminderTime == null
+        reminderTime: _reminderTimeController.text.isEmpty
             ? null
             : _reminderTimeController.text,
+        streak: originalHabit?.streak ?? 0,
+        weeklyCompletions:
+            originalHabit?.weeklyCompletions ??
+            const [false, false, false, false, false, false, false],
       ),
     );
   }

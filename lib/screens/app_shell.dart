@@ -81,10 +81,19 @@ class _AppShellState extends State<AppShell> {
           ? HomeScreen(
               habits: _habits,
               onHabitTap: (habit) {
+                final habitIndex = _habits.indexOf(habit);
                 Navigator.push<void>(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (context) => QuestDetailScreen(habit: habit),
+                    builder: (context) => QuestDetailScreen(
+                      habit: habit,
+                      onHabitUpdated: (updatedHabit) {
+                        if (!mounted || habitIndex < 0) return;
+                        setState(() {
+                          _habits[habitIndex] = updatedHabit;
+                        });
+                      },
+                    ),
                   ),
                 );
               },

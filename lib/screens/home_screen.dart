@@ -179,17 +179,47 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 5),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(habit.category, style: textTheme.labelMedium),
-              const SizedBox(width: 10),
-              const Icon(
-                Icons.local_fire_department_rounded,
-                size: 17,
-                color: AppColors.streak,
+              Text(
+                '${habit.category} - ${habit.frequency}',
+                style: textTheme.labelMedium,
               ),
-              const SizedBox(width: 3),
-              Text('${habit.streak} day streak', style: textTheme.labelMedium),
+              if (habit.description.isNotEmpty)
+                Text(
+                  habit.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelSmall,
+                ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 17,
+                    color: AppColors.streak,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${habit.streak} day streak',
+                    style: textTheme.labelMedium,
+                  ),
+                  if (habit.reminderTime != null) ...[
+                    const SizedBox(width: 10),
+                    const Icon(Icons.access_time_rounded, size: 15),
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        habit.reminderTime!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelMedium,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),
