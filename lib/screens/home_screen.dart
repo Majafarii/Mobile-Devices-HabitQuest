@@ -4,34 +4,19 @@ import '../models/habit.dart';
 import '../theme/app_colors.dart';
 
 /// Home tab content populated with demo data until real habit data is connected.
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.habits, required this.onHabitTap});
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({
+    super.key,
+    required this.habits,
+    required this.completed,
+    required this.onCompletionChanged,
+    required this.onHabitTap,
+  });
 
   final List<Habit> habits;
+  final List<bool> completed;
+  final void Function(int index, bool isComplete) onCompletionChanged;
   final ValueChanged<Habit> onHabitTap;
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  late final List<bool> _completed;
-
-  @override
-  void initState() {
-    super.initState();
-    _completed = List<bool>.filled(widget.habits.length, false);
-  }
-
-  @override
-  void didUpdateWidget(covariant HomeScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_completed.length < widget.habits.length) {
-      _completed.addAll(
-        List<bool>.filled(widget.habits.length - _completed.length, false),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,8 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 24),
           Text("Today's Quests", style: textTheme.titleLarge),
           const SizedBox(height: 12),
-          for (var index = 0; index < widget.habits.length; index++)
-            _buildHabitCard(context, index),
+          if (habits.isEmpty)
+            _buildEmptyState(context)
+          else
+            for (var index = 0; index < habits.length; index++)
+              _buildHabitCard(context, index),
         ],
       ),
     );
@@ -160,8 +148,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHabitCard(BuildContext context, int index) {
-    final habit = widget.habits[index];
-    final isCompleted = _completed[index];
+    final habit = habits[index];
+    final isCompleted = completed[index];
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
@@ -169,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        onTap: () => widget.onHabitTap(habit),
+        onTap: () => onHabitTap(habit),
         title: Text(
           habit.name,
           style: textTheme.titleMedium?.copyWith(
@@ -226,11 +214,30 @@ class _HomeScreenState extends State<HomeScreen> {
         trailing: Checkbox(
           value: isCompleted,
           activeColor: AppColors.success,
-          onChanged: (value) {
-            setState(() {
-              _completed[index] = value ?? false;
-            });
-          },
+          onChanged: (value) => onCompletionChanged(index, value ?? false),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Icon(Icons.flag_outlined, size: 34, color: AppColors.pink),
+            const SizedBox(height: 10),
+            Text('No quests yet', style: textTheme.titleLarge),
+            const SizedBox(height: 6),
+            Text(
+              'Add a habit to start building your journey.',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium,
+            ),
+          ],
         ),
       ),
     );

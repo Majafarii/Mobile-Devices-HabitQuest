@@ -25,6 +25,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
+  late final List<bool> _completed;
   final List<Habit> _habits = [
     const Habit(
       name: 'Drink Water',
@@ -64,6 +65,12 @@ class _AppShellState extends State<AppShell> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _completed = List<bool>.filled(_habits.length, false, growable: true);
+  }
+
   static const _tabs = [
     _TabInfo(title: 'Home', icon: Icons.home_outlined),
     _TabInfo(title: 'Progress', icon: Icons.insights_outlined),
@@ -80,11 +87,19 @@ class _AppShellState extends State<AppShell> {
       body: _selectedIndex == 0
           ? HomeScreen(
               habits: _habits,
-              onHabitTap: (habit) {
+              completed: _completed,
+              onCompletionChanged: (index, isComplete) {
+                setState(() {
+                  _completed[index] = isComplete;
+                });
+              },
+              onHabitTap: (habit) async {
                 final habitIndex = _habits.indexOf(habit);
-                Navigator.push<void>(
+                if (habitIndex < 0) return;
+
+                final deletedHabit = await Navigator.push<Habit>(
                   context,
-                  MaterialPageRoute<void>(
+                  MaterialPageRoute<Habit>(
                     builder: (context) => QuestDetailScreen(
                       habit: habit,
                       onHabitUpdated: (updatedHabit) {
@@ -96,6 +111,19 @@ class _AppShellState extends State<AppShell> {
                     ),
                   ),
                 );
+                if (!context.mounted || deletedHabit == null) return;
+
+                final deletedIndex = _habits.indexOf(deletedHabit);
+                if (deletedIndex < 0) return;
+                setState(() {
+                  _habits.removeWhere(
+                    (habitInList) => identical(habitInList, deletedHabit),
+                  );
+                  _completed.removeAt(deletedIndex);
+                });
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Quest deleted')));
               },
             )
           : _selectedIndex == 1
@@ -118,6 +146,7 @@ class _AppShellState extends State<AppShell> {
 
                 setState(() {
                   _habits.add(newHabit);
+                  _completed.add(false);
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Quest created successfully!')),

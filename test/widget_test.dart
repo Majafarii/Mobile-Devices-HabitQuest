@@ -71,4 +71,67 @@ void main() {
       expect(find.byType(NavigationBar), findsOneWidget);
     }
   });
+
+  testWidgets('deleting quests confirms first and shows the empty state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const HabitQuestApp());
+
+    await tester.scrollUntilVisible(
+      find.text('Drink Water'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Drink Water'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Delete Quest'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete Quest'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete quest?'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Drink Water'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Drink Water'), findsOneWidget);
+
+    final habitNames = [
+      'Drink Water',
+      'Study 1 Hour',
+      'Morning Workout',
+      'Read 20 Minutes',
+    ];
+
+    for (final habitName in habitNames) {
+      await tester.scrollUntilVisible(
+        find.text(habitName),
+        250,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text(habitName));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Delete Quest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete Quest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('Quest deleted'), findsOneWidget);
+    expect(find.text('No quests yet'), findsOneWidget);
+    expect(
+      find.text('Add a habit to start building your journey.'),
+      findsOneWidget,
+    );
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
 }

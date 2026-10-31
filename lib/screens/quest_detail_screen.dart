@@ -158,15 +158,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Delete Quest will be available soon. Nothing was deleted.',
-                      ),
-                    ),
-                  );
-                },
+                onPressed: _confirmDeleteHabit,
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Delete Quest'),
                 style: ElevatedButton.styleFrom(
@@ -226,5 +218,37 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     widget.onHabitUpdated(updatedHabit);
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Quest updated!')));
+  }
+
+  Future<void> _confirmDeleteHabit() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete quest?'),
+        content: Text(
+          'Are you sure you want to delete "${_habit.name}"? '
+          'This quest will be removed from your list.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.pink,
+              foregroundColor: AppColors.surface,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    if (shouldDelete != true) return;
+
+    Navigator.pop(context, _habit);
   }
 }
