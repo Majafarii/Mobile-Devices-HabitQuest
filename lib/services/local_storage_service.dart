@@ -68,7 +68,36 @@ class LocalStorageService {
     await saveHabits(habits);
   }
 
-  // Load user level, XP, and streak progress. Seeds baseline stats if null.
+  // Toggle weekly completion status for a given day index (0-6).
+  Future<Habit?> toggleHabitDay(String habitIdentifier, int dayIndex) async {
+    if (dayIndex < 0 || dayIndex > 6) return null;
+
+    final habits = await loadHabits();
+    final index = habits.indexWhere((h) => (h.id ?? h.name) == habitIdentifier);
+    if (index == -1) return null;
+
+    final habit = habits[index];
+    final updatedCompletions = List<bool>.from(habit.weeklyCompletions);
+    final isNowDone = !updatedCompletions[dayIndex];
+    updatedCompletions[dayIndex] = isNowDone;
+
+    final updatedHabit = habit.copyWith(
+      weeklyCompletions: updatedCompletions,
+      streak: isNowDone
+          ? habit.streak + 1
+          : (habit.streak > 0 ? habit.streak - 1 : 0),
+    );
+
+    habits[index] = updatedHabit;
+    await saveHabits(habits);
+
+    if (isNowDone) {
+      await addXp(habit.xpReward);
+    }
+
+    return updatedHabit;
+  }
+
   Future<UserStats> loadUserStats() async {
     final prefs = await SharedPreferences.getInstance();
     final String? statsJson = prefs.getString(_statsKey);
@@ -87,13 +116,11 @@ class LocalStorageService {
     return UserStats.fromJson(statsJson);
   }
 
-  // Persist updated user XP, level, and streaks.
   Future<bool> saveUserStats(UserStats stats) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.setString(_statsKey, stats.toJson());
   }
 
-  // Add XP, calculate level progression, and persist the updated stats.
   Future<UserStats> addXp(int xpEarned) async {
     var stats = await loadUserStats();
     int newXp = stats.currentXp + xpEarned;
@@ -114,5 +141,12 @@ class LocalStorageService {
 
     await saveUserStats(updatedStats);
     return updatedStats;
+  }
+
+  // Clear all saved preferences (useful for testing seed data and grading demo resets).
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_habitsKey);
+    await prefs.remove(_statsKey);
   }
 }
