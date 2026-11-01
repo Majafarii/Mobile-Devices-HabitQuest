@@ -72,6 +72,47 @@ void main() {
     }
   });
 
+  testWidgets('quest completion toggles independently and persists across tabs', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const HabitQuestApp());
+
+    final firstCheckbox = find.byType(Checkbox).at(0);
+    final secondCheckbox = find.byType(Checkbox).at(1);
+
+    expect(tester.widget<Checkbox>(firstCheckbox).value, isFalse);
+    expect(tester.widget<Checkbox>(secondCheckbox).value, isFalse);
+
+    await tester.ensureVisible(firstCheckbox);
+    await tester.pumpAndSettle();
+    await tester.tap(firstCheckbox);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<Checkbox>(firstCheckbox).value, isTrue);
+    expect(tester.widget<Checkbox>(secondCheckbox).value, isFalse);
+
+    await tester.tap(firstCheckbox);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Checkbox>(firstCheckbox).value, isFalse);
+
+    await tester.tap(firstCheckbox);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.insights_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.home_outlined));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Checkbox>(find.byType(Checkbox).at(0)).value,
+      isTrue,
+    );
+    expect(
+      tester.widget<Checkbox>(find.byType(Checkbox).at(1)).value,
+      isFalse,
+    );
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
   testWidgets('deleting quests confirms first and shows the empty state', (
     tester,
   ) async {
