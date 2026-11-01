@@ -115,6 +115,35 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
+  testWidgets('quest completion stays in sync between Home and details', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const HabitQuestApp());
+
+    final homeCheckbox = find.byType(Checkbox).at(0);
+    await tester.ensureVisible(homeCheckbox);
+    await tester.pumpAndSettle();
+    await tester.tap(homeCheckbox);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Checkbox>(homeCheckbox).value, isTrue);
+
+    await tester.ensureVisible(find.text('Drink Water'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Drink Water'));
+    await tester.pumpAndSettle();
+
+    final detailCheckbox = find.byType(Checkbox);
+    expect(tester.widget<Checkbox>(detailCheckbox).value, isTrue);
+    await tester.tap(detailCheckbox);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Checkbox>(detailCheckbox).value, isFalse);
+    expect(find.text('Quest marked incomplete'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(tester.widget<Checkbox>(homeCheckbox).value, isFalse);
+  });
+
   testWidgets('deleting quests confirms first and shows the empty state', (
     tester,
   ) async {

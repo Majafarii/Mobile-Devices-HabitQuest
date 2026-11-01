@@ -9,10 +9,14 @@ class QuestDetailScreen extends StatefulWidget {
   const QuestDetailScreen({
     super.key,
     required this.habit,
+    required this.isCompleted,
+    required this.onCompletionChanged,
     required this.onHabitUpdated,
   });
 
   final Habit habit;
+  final bool isCompleted;
+  final ValueChanged<bool> onCompletionChanged;
   final ValueChanged<Habit> onHabitUpdated;
 
   @override
@@ -21,6 +25,7 @@ class QuestDetailScreen extends StatefulWidget {
 
 class _QuestDetailScreenState extends State<QuestDetailScreen> {
   late Habit _habit;
+  late bool _isCompleted;
 
   static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -28,6 +33,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   void initState() {
     super.initState();
     _habit = widget.habit;
+    _isCompleted = widget.isCompleted;
   }
 
   @override
@@ -88,6 +94,30 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                   _habit.reminderTime == null
                       ? 'No reminder set'
                       : 'Reminder at ${_habit.reminderTime}',
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Card(
+              child: ListTile(
+                leading: Icon(
+                  _isCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: _isCompleted
+                      ? AppColors.success
+                      : colors.onSurfaceVariant,
+                ),
+                title: const Text("Today's quest"),
+                subtitle: Text(
+                  _isCompleted ? 'Completed' : 'Not completed yet',
+                ),
+                trailing: Checkbox(
+                  value: _isCompleted,
+                  activeColor: AppColors.success,
+                  onChanged: (value) {
+                    if (value != null) _setCompletion(value);
+                  },
                 ),
               ),
             ),
@@ -217,6 +247,18 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     });
     widget.onHabitUpdated(updatedHabit);
     _showActionSnackBar('Quest updated!');
+  }
+
+  void _setCompletion(bool isCompleted) {
+    if (_isCompleted == isCompleted) return;
+
+    setState(() {
+      _isCompleted = isCompleted;
+    });
+    widget.onCompletionChanged(isCompleted);
+    _showActionSnackBar(
+      isCompleted ? 'Quest completed!' : 'Quest marked incomplete',
+    );
   }
 
   Future<void> _confirmDeleteHabit() async {

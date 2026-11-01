@@ -89,9 +89,7 @@ class _AppShellState extends State<AppShell> {
               habits: _habits,
               completed: _completed,
               onCompletionChanged: (index, isComplete) {
-                setState(() {
-                  _completed[index] = isComplete;
-                });
+                _updateCompletion(index, isComplete);
                 _showActionSnackBar(
                   isComplete
                       ? 'Quest completed!'
@@ -107,6 +105,10 @@ class _AppShellState extends State<AppShell> {
                   MaterialPageRoute<Habit>(
                     builder: (context) => QuestDetailScreen(
                       habit: habit,
+                      isCompleted: _completed[habitIndex],
+                      onCompletionChanged: (isComplete) {
+                        _updateCompletion(habitIndex, isComplete);
+                      },
                       onHabitUpdated: (updatedHabit) {
                         if (!mounted || habitIndex < 0) return;
                         setState(() {
@@ -170,6 +172,14 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  void _updateCompletion(int index, bool isComplete) {
+    if (index < 0 || index >= _completed.length) return;
+
+    setState(() {
+      _completed[index] = isComplete;
+    });
   }
 
   void _showActionSnackBar(String message) {
