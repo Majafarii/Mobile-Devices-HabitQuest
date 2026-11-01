@@ -92,6 +92,11 @@ class _AppShellState extends State<AppShell> {
                 setState(() {
                   _completed[index] = isComplete;
                 });
+                _showActionSnackBar(
+                  isComplete
+                      ? 'Quest completed!'
+                      : 'Quest marked incomplete',
+                );
               },
               onHabitTap: (habit) async {
                 final habitIndex = _habits.indexOf(habit);
@@ -121,9 +126,7 @@ class _AppShellState extends State<AppShell> {
                   );
                   _completed.removeAt(deletedIndex);
                 });
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Quest deleted')));
+                _showActionSnackBar('Quest deleted');
               },
             )
           : _selectedIndex == 1
@@ -148,9 +151,7 @@ class _AppShellState extends State<AppShell> {
                   _habits.add(newHabit);
                   _completed.add(false);
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Quest created successfully!')),
-                );
+                _showActionSnackBar('Quest created successfully!');
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Habit'),
@@ -169,6 +170,13 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
     );
+  }
+
+  void _showActionSnackBar(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

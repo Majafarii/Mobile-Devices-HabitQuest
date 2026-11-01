@@ -216,8 +216,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       _habit = updatedHabit;
     });
     widget.onHabitUpdated(updatedHabit);
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Quest updated!')));
+    _showActionSnackBar('Quest updated!');
   }
 
   Future<void> _confirmDeleteHabit() async {
@@ -250,5 +249,12 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     if (shouldDelete != true) return;
 
     Navigator.pop(context, _habit);
+  }
+
+  void _showActionSnackBar(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }

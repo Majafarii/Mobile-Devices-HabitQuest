@@ -90,10 +90,12 @@ void main() {
 
     expect(tester.widget<Checkbox>(firstCheckbox).value, isTrue);
     expect(tester.widget<Checkbox>(secondCheckbox).value, isFalse);
+    expect(find.text('Quest completed!'), findsOneWidget);
 
     await tester.tap(firstCheckbox);
     await tester.pumpAndSettle();
     expect(tester.widget<Checkbox>(firstCheckbox).value, isFalse);
+    expect(find.text('Quest marked incomplete'), findsOneWidget);
 
     await tester.tap(firstCheckbox);
     await tester.pumpAndSettle();
