@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/habit.dart';
 import '../models/user_stats.dart';
 
-// Service responsible for persisting habits, streaks, and XP locally.
+/// Service responsible for persisting habits, streaks, and XP locally.
 class LocalStorageService {
   static const String _habitsKey = 'habitquest_habits';
   static const String _statsKey = 'habitquest_user_stats';
@@ -39,7 +39,7 @@ class LocalStorageService {
 
     if (habitsJson == null) {
       await saveHabits(_defaultHabits);
-      return _defaultHabits;
+      return List<Habit>.from(_defaultHabits);
     }
 
     final List<dynamic> decodedList = json.decode(habitsJson) as List<dynamic>;
@@ -68,7 +68,7 @@ class LocalStorageService {
     await saveHabits(habits);
   }
 
-  // Toggle weekly completion status for a given day index (0-6).
+  /// Toggle weekly completion status for a given day index (0-6).
   Future<Habit?> toggleHabitDay(String habitIdentifier, int dayIndex) async {
     if (dayIndex < 0 || dayIndex > 6) return null;
 
@@ -143,7 +143,7 @@ class LocalStorageService {
     return updatedStats;
   }
 
-  // Clear all saved preferences (useful for testing seed data and grading demo resets).
+  /// Clear all saved preferences (useful for testing seed data and grading demo resets).
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_habitsKey);
