@@ -81,9 +81,10 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _selectedIndex == 0
-          ? null
-          : AppBar(title: const Text('HabitQuest')),
+      appBar: AppBar(
+        title: _selectedIndex == 0 ? null : const Text('HabitQuest'),
+      ),
+      drawer: _buildDrawer(context),
       body: _selectedIndex == 0
           ? HomeScreen(
               habits: _habits,
@@ -170,6 +171,100 @@ class _AppShellState extends State<AppShell> {
           for (final tab in _tabs)
             NavigationDestination(icon: Icon(tab.icon), label: tab.title),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Drawer(
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.flag_rounded,
+                      color: colors.primary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('HabitQuest', style: textTheme.titleLarge),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Build better habits',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                children: [
+                  for (var index = 0; index < _tabs.length; index++)
+                    ListTile(
+                      selected: _selectedIndex == index,
+                      selectedColor: colors.primary,
+                      selectedTileColor: colors.primaryContainer,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      leading: Icon(_tabs[index].icon),
+                      title: Text(_tabs[index].title),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
