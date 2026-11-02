@@ -72,6 +72,56 @@ void main() {
     }
   });
 
+  testWidgets('drawer and bottom navigation share the selected destination', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const HabitQuestApp());
+
+    final destinations = ['Home', 'Progress', 'Achievements', 'Profile'];
+    final contentChecks = [
+      "Today's Quests",
+      '1,250 total XP',
+      '2 of 6 badges unlocked',
+      'Alex Morgan',
+    ];
+
+    for (var index = 0; index < destinations.length; index++) {
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Settings'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ListTile, destinations[index]));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        index,
+      );
+      expect(find.text(contentChecks[index]), findsOneWidget);
+    }
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Achievements'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      2,
+    );
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Achievements'),
+      ).selected,
+      isTrue,
+    );
+  });
+
   testWidgets('quest completion toggles independently and persists across tabs', (
     tester,
   ) async {

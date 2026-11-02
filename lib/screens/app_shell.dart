@@ -243,7 +243,12 @@ class _AppShellState extends State<AppShell> {
                       ),
                       leading: Icon(_tabs[index].icon),
                       title: Text(_tabs[index].title),
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        setState(() {
+                          _selectedIndex = index;
+                        });
+                        Navigator.pop(context);
+                      },
                     ),
                 ],
               ),
