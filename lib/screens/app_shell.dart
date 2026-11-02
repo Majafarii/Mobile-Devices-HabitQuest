@@ -13,11 +13,15 @@ class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
     required this.isDarkMode,
+    required this.textScaleFactor,
     required this.onDarkModeChanged,
+    required this.onTextScaleFactorChanged,
   });
 
   final bool isDarkMode;
+  final double textScaleFactor;
   final ValueChanged<bool> onDarkModeChanged;
+  final ValueChanged<double> onTextScaleFactorChanged;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -25,6 +29,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
+  bool _demoNotificationsEnabled = false;
   late final List<bool> _completed;
   final List<Habit> _habits = [
     const Habit(
@@ -138,7 +143,15 @@ class _AppShellState extends State<AppShell> {
           ? const AchievementsScreen()
           : ProfileScreen(
               isDarkMode: widget.isDarkMode,
+              demoNotificationsEnabled: _demoNotificationsEnabled,
+              textScaleFactor: widget.textScaleFactor,
               onDarkModeChanged: widget.onDarkModeChanged,
+              onDemoNotificationsChanged: (isEnabled) {
+                setState(() {
+                  _demoNotificationsEnabled = isEnabled;
+                });
+              },
+              onTextScaleFactorChanged: widget.onTextScaleFactorChanged,
             ),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
@@ -265,7 +278,12 @@ class _AppShellState extends State<AppShell> {
                 ),
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('Settings'),
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  setState(() {
+                    _selectedIndex = 3;
+                  });
+                  Navigator.pop(context);
+                },
               ),
             ),
           ],

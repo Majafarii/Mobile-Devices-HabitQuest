@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 
 /// Profile and preference controls populated with demo account details.
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
     required this.isDarkMode,
+    required this.demoNotificationsEnabled,
+    required this.textScaleFactor,
     required this.onDarkModeChanged,
+    required this.onDemoNotificationsChanged,
+    required this.onTextScaleFactorChanged,
   });
 
   final bool isDarkMode;
+  final bool demoNotificationsEnabled;
+  final double textScaleFactor;
   final ValueChanged<bool> onDarkModeChanged;
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  bool _demoNotificationsEnabled = false;
+  final ValueChanged<bool> onDemoNotificationsChanged;
+  final ValueChanged<double> onTextScaleFactorChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -102,24 +103,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: const Text(
                     'Demo setting only; notification scheduling is not connected.',
                   ),
-                  value: _demoNotificationsEnabled,
-                  onChanged: (isEnabled) {
-                    setState(() {
-                      _demoNotificationsEnabled = isEnabled;
-                    });
-                  },
+                  value: demoNotificationsEnabled,
+                  onChanged: onDemoNotificationsChanged,
                 ),
                 const Divider(height: 1, indent: 56),
                 SwitchListTile(
                   secondary: const Icon(Icons.dark_mode_outlined),
                   title: const Text('Dark theme'),
                   subtitle: Text(
-                    widget.isDarkMode
+                    isDarkMode
                         ? 'Dark appearance is on'
                         : 'Use dark appearance',
                   ),
-                  value: widget.isDarkMode,
-                  onChanged: widget.onDarkModeChanged,
+                  value: isDarkMode,
+                  onChanged: onDarkModeChanged,
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.text_fields_rounded),
+                  title: const Text('Text size'),
+                  subtitle: Text(
+                    textScaleFactor < 1
+                        ? 'Small'
+                        : textScaleFactor > 1
+                        ? 'Large'
+                        : 'Default',
+                  ),
+                  trailing: DropdownButton<double>(
+                    value: textScaleFactor,
+                    isDense: true,
+                    underline: const SizedBox.shrink(),
+                    items: const [
+                      DropdownMenuItem(value: 0.9, child: Text('Small')),
+                      DropdownMenuItem(value: 1.0, child: Text('Default')),
+                      DropdownMenuItem(value: 1.2, child: Text('Large')),
+                    ],
+                    onChanged: (textScaleFactor) {
+                      if (textScaleFactor != null) {
+                        onTextScaleFactorChanged(textScaleFactor);
+                      }
+                    },
+                  ),
                 ),
               ],
             ),

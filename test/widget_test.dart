@@ -122,6 +122,105 @@ void main() {
     );
   });
 
+  testWidgets('drawer Settings opens Profile and applies app-wide preferences', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const HabitQuestApp());
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alex Morgan'), findsOneWidget);
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      3,
+    );
+    expect(
+      find.text(
+        'Demo setting only; notification scheduling is not connected.',
+      ),
+      findsOneWidget,
+    );
+    final notificationsTile = find.widgetWithText(
+      SwitchListTile,
+      'Notifications',
+    );
+    await tester.ensureVisible(notificationsTile);
+    await tester.pumpAndSettle();
+    await tester.tap(notificationsTile);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(notificationsTile).value, isTrue);
+
+    await tester.ensureVisible(find.text('Text size'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButton<double>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Large').last);
+    await tester.pumpAndSettle();
+
+    final profileText = find.text('Alex Morgan');
+    expect(
+      MediaQuery.textScalerOf(tester.element(profileText)).scale(10),
+      12,
+    );
+    expect(tester.takeException(), isNull);
+
+    final darkThemeTile = find.widgetWithText(SwitchListTile, 'Dark theme');
+    await tester.ensureVisible(darkThemeTile);
+    await tester.pumpAndSettle();
+    await tester.tap(darkThemeTile);
+    await tester.pumpAndSettle();
+    expect(
+      Theme.of(tester.element(find.text('Alex Morgan'))).brightness,
+      Brightness.dark,
+    );
+
+    await tester.tap(find.byIcon(Icons.home_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text("Today's Quests"), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.text("Today's Quests"))).brightness,
+      Brightness.dark,
+    );
+    expect(
+      MediaQuery.textScalerOf(
+        tester.element(find.text("Today's Quests")),
+      ).scale(10),
+      12,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Profile'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Notifications'),
+      ).value,
+      isTrue,
+    );
+
+    await tester.tap(find.byIcon(Icons.home_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add Habit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add a Habit'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.text('Add a Habit'))).brightness,
+      Brightness.dark,
+    );
+    final dialogTextScale = MediaQuery.textScalerOf(
+      tester.element(find.text('Habit name')),
+    ).scale(10);
+    expect(dialogTextScale, 12);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('quest completion toggles independently and persists across tabs', (
     tester,
   ) async {
