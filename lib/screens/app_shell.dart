@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
+import '../services/xp_engine.dart';
+import '../services/progress_tracker.dart';
 import '../widgets/add_habit_dialog.dart';
 import 'achievements_screen.dart';
 import 'home_screen.dart';
@@ -30,7 +32,16 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
   bool _demoNotificationsEnabled = false;
+
   late final List<bool> _completed;
+
+  // Gamification system
+  final XpEngine _xpEngine = XpEngine();
+  final List<CompletionRecord> _completionRecords = [];
+
+  late final List<String> _habitIds;
+  int _nextHabitId = 0;
+
   final List<Habit> _habits = [
     const Habit(
       name: 'Drink Water',
@@ -73,7 +84,10 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+
     _completed = List<bool>.filled(_habits.length, false, growable: true);
+
+    _habitIds = List.generate(_habits.length, (_) => 'habit-${_nextHabitId++}');
   }
 
   static const _tabs = [
@@ -94,13 +108,27 @@ class _AppShellState extends State<AppShell> {
           ? HomeScreen(
               habits: _habits,
               completed: _completed,
+              xpEngine: _xpEngine,
               onCompletionChanged: (index, isComplete) {
+                final previousXp = _xpEngine.totalXp;
+
                 _updateCompletion(index, isComplete);
-                _showActionSnackBar(
-                  isComplete
-                      ? 'Quest completed!'
-                      : 'Quest marked incomplete',
-                );
+
+                final xpDifference = _xpEngine.totalXp - previousXp;
+
+                if (xpDifference > 0) {
+                  _showActionSnackBar('Quest completed! +$xpDifference XP');
+                } else if (xpDifference < 0) {
+                  _showActionSnackBar(
+                    'Quest marked incomplete. $xpDifference XP',
+                  );
+                } else {
+                  _showActionSnackBar(
+                    isComplete
+                        ? 'Quest already rewarded today'
+                        : 'Quest marked incomplete',
+                  );
+                }
               },
               onHabitTap: (habit) async {
                 final habitIndex = _habits.indexOf(habit);
@@ -116,7 +144,8 @@ class _AppShellState extends State<AppShell> {
                         _updateCompletion(habitIndex, isComplete);
                       },
                       onHabitUpdated: (updatedHabit) {
-                        if (!mounted || habitIndex < 0) return;
+                        if (!mounted) return;
+
                         setState(() {
                           _habits[habitIndex] = updatedHabit;
                         });
@@ -124,16 +153,18 @@ class _AppShellState extends State<AppShell> {
                     ),
                   ),
                 );
+
                 if (!context.mounted || deletedHabit == null) return;
 
                 final deletedIndex = _habits.indexOf(deletedHabit);
                 if (deletedIndex < 0) return;
+
                 setState(() {
-                  _habits.removeWhere(
-                    (habitInList) => identical(habitInList, deletedHabit),
-                  );
+                  _habits.removeAt(deletedIndex);
                   _completed.removeAt(deletedIndex);
+                  _habitIds.removeAt(deletedIndex);
                 });
+
                 _showActionSnackBar('Quest deleted');
               },
             )
@@ -160,13 +191,15 @@ class _AppShellState extends State<AppShell> {
                   context: context,
                   builder: (context) => const AddHabitDialog(),
                 );
-                if (!context.mounted) return;
-                if (newHabit == null) return;
+
+                if (!context.mounted || newHabit == null) return;
 
                 setState(() {
                   _habits.add(newHabit);
                   _completed.add(false);
+                  _habitIds.add('habit-${_nextHabitId++}');
                 });
+
                 _showActionSnackBar('Quest created successfully!');
               },
               icon: const Icon(Icons.add),
@@ -292,16 +325,48 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  // Handles XP rewards and completion history.
   void _updateCompletion(int index, bool isComplete) {
     if (index < 0 || index >= _completed.length) return;
 
+    // Avoid processing the same state twice.
+    if (_completed[index] == isComplete) return;
+
+    final habit = _habits[index];
+    final now = DateTime.now();
+
+    final completionId =
+        '${_habitIds[index]}-${now.year}-${now.month}-${now.day}';
+
     setState(() {
       _completed[index] = isComplete;
+
+      if (isComplete) {
+        final awarded = _xpEngine.awardQuest(completionId);
+
+        if (awarded) {
+          _completionRecords.add(
+            CompletionRecord(
+              id: completionId,
+              habitName: habit.name,
+              completedAt: now,
+              xpEarned: _xpEngine.xpPerQuest,
+            ),
+          );
+        }
+      } else {
+        final removed = _xpEngine.undoQuest(completionId);
+
+        if (removed) {
+          _completionRecords.removeWhere((record) => record.id == completionId);
+        }
+      }
     });
   }
 
   void _showActionSnackBar(String message) {
     final messenger = ScaffoldMessenger.of(context);
+
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
