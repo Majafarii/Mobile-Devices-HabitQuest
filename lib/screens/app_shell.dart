@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
 import '../services/xp_engine.dart';
+import '../services/achievement_engine.dart';
 import '../services/progress_tracker.dart';
 import '../widgets/add_habit_dialog.dart';
 import 'achievements_screen.dart';
@@ -163,12 +164,20 @@ class _AppShellState extends State<AppShell> {
         );
 
       case 1:
-        // Stage 4B: Live Progress Dashboard integration.
+        // Live Progress Dashboard integration.
         return ProgressScreen(xpEngine: _xpEngine, records: _completionRecords);
 
       case 2:
-        // Achievement UI integration will be added next.
-        return const AchievementsScreen();
+        // Evaluate achievements using actual XP and completions.
+        // Historical streak data is not yet available.
+        final achievementProgress = AchievementProgress(
+          totalCompletions: _completionRecords.length,
+          level: _xpEngine.level,
+          longestStreak: 0,
+          hasPerfectWeek: false,
+        );
+
+        return AchievementsScreen(progress: achievementProgress);
 
       case 3:
         return ProfileScreen(
@@ -194,8 +203,7 @@ class _AppShellState extends State<AppShell> {
     final habitIndex = _habits.indexOf(habit);
     if (habitIndex < 0) return;
 
-    // Capture the ID so edits and other list changes do not
-    // accidentally target a different habit.
+    // Capture the ID so edits do not target a different habit.
     final habitId = _habitIds[habitIndex];
 
     final deletedHabit = await Navigator.push<Habit>(
