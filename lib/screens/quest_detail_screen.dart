@@ -4,7 +4,7 @@ import '../models/habit.dart';
 import '../theme/app_colors.dart';
 import '../widgets/add_habit_dialog.dart';
 
-/// Shows demo details for the quest selected on the Home screen.
+/// Shows details for the quest selected on the Home screen.
 class QuestDetailScreen extends StatefulWidget {
   const QuestDetailScreen({
     super.key,
@@ -16,7 +16,9 @@ class QuestDetailScreen extends StatefulWidget {
 
   final Habit habit;
   final bool isCompleted;
-  final ValueChanged<bool> onCompletionChanged;
+
+  /// Records the completion and returns the habit with its updated streak.
+  final Habit Function(bool isComplete) onCompletionChanged;
   final ValueChanged<Habit> onHabitUpdated;
 
   @override
@@ -252,10 +254,11 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   void _setCompletion(bool isCompleted) {
     if (_isCompleted == isCompleted) return;
 
+    final updatedHabit = widget.onCompletionChanged(isCompleted);
     setState(() {
       _isCompleted = isCompleted;
+      _habit = updatedHabit;
     });
-    widget.onCompletionChanged(isCompleted);
     _showActionSnackBar(
       isCompleted ? 'Quest completed!' : 'Quest marked incomplete',
     );

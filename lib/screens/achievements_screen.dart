@@ -1,60 +1,71 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_progress.dart';
 import '../theme/app_colors.dart';
 
-/// Achievement badges displayed with fixed sample unlock states.
+/// Achievement badges unlocked from the signed-in account's progress.
 class AchievementsScreen extends StatelessWidget {
-  const AchievementsScreen({super.key});
+  const AchievementsScreen({super.key, required this.progress});
 
-  static const _achievements = [
-    _Achievement(
-      title: 'First Quest',
-      description: 'Complete your first quest.',
-      icon: Icons.flag_rounded,
-      isUnlocked: true,
-      color: AppColors.pink,
-    ),
-    _Achievement(
-      title: '7-Day Streak',
-      description: 'Keep a quest streak going for seven days.',
-      icon: Icons.local_fire_department_rounded,
-      isUnlocked: true,
-      color: AppColors.streak,
-    ),
-    _Achievement(
-      title: 'Level 5',
-      description: 'Reach Level 5 through your quest progress.',
-      icon: Icons.stars_rounded,
-      isUnlocked: false,
-      color: AppColors.information,
-    ),
-    _Achievement(
-      title: '30-Day Streak',
-      description: 'Maintain a quest streak for 30 days.',
-      icon: Icons.local_fire_department_rounded,
-      isUnlocked: false,
-      color: AppColors.pink,
-    ),
-    _Achievement(
-      title: '100 Quests',
-      description: 'Complete 100 quests.',
-      icon: Icons.emoji_events_rounded,
-      isUnlocked: false,
-      color: AppColors.streak,
-    ),
-    _Achievement(
-      title: 'Perfect Week',
-      description: 'Complete all of your quests for a full week.',
-      icon: Icons.calendar_month_rounded,
-      isUnlocked: false,
-      color: AppColors.success,
-    ),
-  ];
+  final UserProgress progress;
+
+  List<_Achievement> get _achievements {
+    final hasPerfectWeek =
+        progress.habits.isNotEmpty &&
+        progress.habits.every(
+          (habit) => habit.weeklyCompletions.every((done) => done),
+        );
+    return [
+      _Achievement(
+        title: 'First Quest',
+        description: 'Complete your first quest.',
+        icon: Icons.flag_rounded,
+        isUnlocked: progress.totalCompletions >= 1,
+        color: AppColors.pink,
+      ),
+      _Achievement(
+        title: '7-Day Streak',
+        description: 'Keep a quest streak going for seven days.',
+        icon: Icons.local_fire_department_rounded,
+        isUnlocked: progress.longestStreak >= 7,
+        color: AppColors.streak,
+      ),
+      _Achievement(
+        title: 'Level 5',
+        description: 'Reach Level 5 through your quest progress.',
+        icon: Icons.stars_rounded,
+        isUnlocked: progress.level >= 5,
+        color: AppColors.information,
+      ),
+      _Achievement(
+        title: '30-Day Streak',
+        description: 'Maintain a quest streak for 30 days.',
+        icon: Icons.local_fire_department_rounded,
+        isUnlocked: progress.longestStreak >= 30,
+        color: AppColors.pink,
+      ),
+      _Achievement(
+        title: '100 Quests',
+        description: 'Complete 100 quests.',
+        icon: Icons.emoji_events_rounded,
+        isUnlocked: progress.totalCompletions >= 100,
+        color: AppColors.streak,
+      ),
+      _Achievement(
+        title: 'Perfect Week',
+        description: 'Complete all of your quests for a full week.',
+        icon: Icons.calendar_month_rounded,
+        isUnlocked: hasPerfectWeek,
+        color: AppColors.success,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final achievements = _achievements;
 
     return SafeArea(
       child: ListView(
@@ -69,7 +80,7 @@ class AchievementsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _buildSummaryCard(context),
+          _buildSummaryCard(context, achievements),
           const SizedBox(height: 16),
           GridView.count(
             crossAxisCount: 2,
@@ -79,7 +90,7 @@ class AchievementsScreen extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              for (final achievement in _achievements)
+              for (final achievement in achievements)
                 _buildAchievementCard(context, achievement),
             ],
           ),
@@ -88,8 +99,12 @@ class AchievementsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCard(BuildContext context) {
+  Widget _buildSummaryCard(
+    BuildContext context,
+    List<_Achievement> achievements,
+  ) {
     final textTheme = Theme.of(context).textTheme;
+    final unlocked = achievements.where((a) => a.isUnlocked).length;
 
     return Card(
       child: Padding(
@@ -100,11 +115,10 @@ class AchievementsScreen extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '2 of 6 badges unlocked',
+                '$unlocked of ${achievements.length} badges unlocked',
                 style: textTheme.titleMedium,
               ),
             ),
-            Text('SAMPLE', style: textTheme.labelSmall),
           ],
         ),
       ),

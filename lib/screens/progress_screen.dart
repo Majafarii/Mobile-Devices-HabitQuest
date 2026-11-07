@@ -1,25 +1,38 @@
 import 'package:flutter/material.dart';
 
+import '../models/user_progress.dart';
 import '../theme/app_colors.dart';
 
-/// Progress dashboard built from fixed sample values for the UI prototype.
+/// Progress dashboard for the signed-in account's score and streaks.
 class ProgressScreen extends StatelessWidget {
-  const ProgressScreen({super.key});
+  const ProgressScreen({super.key, required this.progress});
 
-  static const _xpDays = [
-    _XpDay(day: 'M', points: 90, barHeight: 54),
-    _XpDay(day: 'T', points: 140, barHeight: 86),
-    _XpDay(day: 'W', points: 70, barHeight: 42),
-    _XpDay(day: 'T', points: 180, barHeight: 110),
-    _XpDay(day: 'F', points: 110, barHeight: 66),
-    _XpDay(day: 'S', points: 150, barHeight: 92),
-    _XpDay(day: 'S', points: 60, barHeight: 36),
-  ];
+  final UserProgress progress;
 
-  static const _recentCompletions = [
-    _RecentCompletion(habit: 'Drink Water', xp: 25),
-    _RecentCompletion(habit: 'Study 1 Hour', xp: 50),
-    _RecentCompletion(habit: 'Read 20 Minutes', xp: 20),
+  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const _maxBarHeight = 110.0;
+
+  List<_XpDay> get _xpDays {
+    final maxXp = progress.weeklyXp.fold<int>(0, (a, b) => a > b ? a : b);
+    return [
+      for (var i = 0; i < 7; i++)
+        _XpDay(
+          day: _dayLabels[i],
+          points: progress.weeklyXp[i],
+          barHeight: maxXp == 0
+              ? 4
+              : 4 + (_maxBarHeight - 4) * progress.weeklyXp[i] / maxXp,
+        ),
+    ];
+  }
+
+  List<_RecentCompletion> get _recentCompletions => [
+    for (var i = 0; i < progress.habits.length; i++)
+      if (progress.completedToday[i])
+        _RecentCompletion(
+          habit: progress.habits[i].name,
+          xp: UserProgress.xpPerCompletion,
+        ),
   ];
 
   @override
@@ -44,7 +57,7 @@ class ProgressScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'SAMPLE DATA',
+                  '${progress.totalCompletions} QUESTS DONE',
                   style: textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -61,7 +74,7 @@ class ProgressScreen extends StatelessWidget {
                 child: _buildStreakCard(
                   context,
                   title: 'Current Streak',
-                  value: '7 days',
+                  value: _days(progress.currentStreak),
                 ),
               ),
               const SizedBox(width: 12),
@@ -69,7 +82,7 @@ class ProgressScreen extends StatelessWidget {
                 child: _buildStreakCard(
                   context,
                   title: 'Longest Streak',
-                  value: '12 days',
+                  value: _days(progress.longestStreak),
                 ),
               ),
             ],
@@ -79,12 +92,23 @@ class ProgressScreen extends StatelessWidget {
           const SizedBox(height: 24),
           Text('Recent Completions', style: textTheme.titleLarge),
           const SizedBox(height: 12),
-          for (final completion in _recentCompletions)
-            _buildCompletionTile(context, completion),
+          if (_recentCompletions.isEmpty)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.hourglass_empty_rounded),
+                title: const Text('No quests completed yet today'),
+                subtitle: const Text('Complete a quest on Home to earn XP.'),
+              ),
+            )
+          else
+            for (final completion in _recentCompletions)
+              _buildCompletionTile(context, completion),
         ],
       ),
     );
   }
+
+  static String _days(int count) => count == 1 ? '1 day' : '$count days';
 
   Widget _buildXpSummaryCard(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -100,18 +124,36 @@ class ProgressScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.stars_rounded, color: AppColors.pink),
                 const SizedBox(width: 8),
-                Text('Level 4', style: textTheme.titleLarge),
-                const Spacer(),
-                Text('1,250 total XP', style: textTheme.labelMedium),
+                Expanded(
+                  child: Text(
+                    'Level ${progress.level}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleLarge,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '${progress.totalXp} total XP',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: textTheme.labelMedium,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
-            Text('Progress to Level 5', style: textTheme.labelMedium),
+            Text(
+              'Progress to Level ${progress.level + 1}',
+              style: textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: LinearProgressIndicator(
-                value: 0.69,
+                value: progress.levelProgress,
                 minHeight: 9,
                 color: AppColors.pink,
                 backgroundColor: colors.primaryContainer,
@@ -209,7 +251,7 @@ class ProgressScreen extends StatelessWidget {
           color: AppColors.success,
         ),
         title: Text(completion.habit, style: textTheme.titleMedium),
-        subtitle: const Text('Completed today - Sample XP'),
+        subtitle: const Text('Completed today'),
         trailing: Text('+${completion.xp} XP', style: textTheme.labelMedium),
       ),
     );

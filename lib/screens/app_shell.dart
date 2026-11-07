@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
+import '../models/user_account.dart';
+import '../models/user_progress.dart';
 import '../widgets/add_habit_dialog.dart';
 import 'achievements_screen.dart';
 import 'home_screen.dart';
@@ -9,17 +11,24 @@ import 'progress_screen.dart';
 import 'quest_detail_screen.dart';
 
 /// Owns the app's top-level tab selection and keeps navigation visible.
+///
+/// All quest and score data comes from the signed-in account's [progress];
+/// [onProgressChanged] is called after every change so it can be saved.
 class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
-    required this.isDarkMode,
-    required this.textScaleFactor,
+    required this.account,
+    required this.progress,
+    required this.onProgressChanged,
+    required this.onSignOut,
     required this.onDarkModeChanged,
     required this.onTextScaleFactorChanged,
   });
 
-  final bool isDarkMode;
-  final double textScaleFactor;
+  final UserAccount account;
+  final UserProgress progress;
+  final VoidCallback onProgressChanged;
+  final VoidCallback onSignOut;
   final ValueChanged<bool> onDarkModeChanged;
   final ValueChanged<double> onTextScaleFactorChanged;
 
@@ -29,52 +38,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
-  bool _demoNotificationsEnabled = false;
-  late final List<bool> _completed;
-  final List<Habit> _habits = [
-    const Habit(
-      name: 'Drink Water',
-      category: 'Wellness',
-      description:
-          'Keep a water bottle nearby and stay hydrated throughout the day.',
-      frequency: 'Daily',
-      streak: 3,
-      weeklyCompletions: [true, true, false, true, true, false, true],
-    ),
-    const Habit(
-      name: 'Study 1 Hour',
-      category: 'Learning',
-      description:
-          'Spend one focused hour reviewing coursework or class notes.',
-      frequency: 'Daily',
-      streak: 5,
-      weeklyCompletions: [true, true, true, true, false, true, false],
-    ),
-    const Habit(
-      name: 'Morning Workout',
-      category: 'Fitness',
-      description:
-          'Make time for a short workout to start the morning with energy.',
-      frequency: 'Daily',
-      streak: 2,
-      weeklyCompletions: [false, true, true, false, true, false, false],
-    ),
-    const Habit(
-      name: 'Read 20 Minutes',
-      category: 'Reading',
-      description:
-          'Read a book or other useful material for at least 20 minutes.',
-      frequency: 'Daily',
-      streak: 7,
-      weeklyCompletions: [true, true, true, true, true, true, true],
-    ),
-  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _completed = List<bool>.filled(_habits.length, false, growable: true);
-  }
+  UserProgress get _progress => widget.progress;
+  List<Habit> get _habits => _progress.habits;
+  List<bool> get _completed => _progress.completedToday;
 
   static const _tabs = [
     _TabInfo(title: 'Home', icon: Icons.home_outlined),
@@ -92,14 +59,13 @@ class _AppShellState extends State<AppShell> {
       drawer: _buildDrawer(context),
       body: _selectedIndex == 0
           ? HomeScreen(
+              progress: _progress,
               habits: _habits,
               completed: _completed,
               onCompletionChanged: (index, isComplete) {
                 _updateCompletion(index, isComplete);
                 _showActionSnackBar(
-                  isComplete
-                      ? 'Quest completed!'
-                      : 'Quest marked incomplete',
+                  isComplete ? 'Quest completed!' : 'Quest marked incomplete',
                 );
               },
               onHabitTap: (habit) async {
@@ -114,44 +80,47 @@ class _AppShellState extends State<AppShell> {
                       isCompleted: _completed[habitIndex],
                       onCompletionChanged: (isComplete) {
                         _updateCompletion(habitIndex, isComplete);
+                        return _habits[habitIndex];
                       },
                       onHabitUpdated: (updatedHabit) {
                         if (!mounted || habitIndex < 0) return;
                         setState(() {
                           _habits[habitIndex] = updatedHabit;
                         });
+                        widget.onProgressChanged();
                       },
                     ),
                   ),
                 );
                 if (!context.mounted || deletedHabit == null) return;
+                if (habitIndex >= _habits.length) return;
 
-                final deletedIndex = _habits.indexOf(deletedHabit);
-                if (deletedIndex < 0) return;
                 setState(() {
-                  _habits.removeWhere(
-                    (habitInList) => identical(habitInList, deletedHabit),
-                  );
-                  _completed.removeAt(deletedIndex);
+                  _progress.removeHabitAt(habitIndex);
                 });
+                widget.onProgressChanged();
                 _showActionSnackBar('Quest deleted');
               },
             )
           : _selectedIndex == 1
-          ? const ProgressScreen()
+          ? ProgressScreen(progress: _progress)
           : _selectedIndex == 2
-          ? const AchievementsScreen()
+          ? AchievementsScreen(progress: _progress)
           : ProfileScreen(
-              isDarkMode: widget.isDarkMode,
-              demoNotificationsEnabled: _demoNotificationsEnabled,
-              textScaleFactor: widget.textScaleFactor,
+              account: widget.account,
+              progress: _progress,
+              isDarkMode: _progress.isDarkMode,
+              demoNotificationsEnabled: _progress.notificationsEnabled,
+              textScaleFactor: _progress.textScaleFactor,
               onDarkModeChanged: widget.onDarkModeChanged,
               onDemoNotificationsChanged: (isEnabled) {
                 setState(() {
-                  _demoNotificationsEnabled = isEnabled;
+                  _progress.notificationsEnabled = isEnabled;
                 });
+                widget.onProgressChanged();
               },
               onTextScaleFactorChanged: widget.onTextScaleFactorChanged,
+              onSignOut: _confirmSignOut,
             ),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
@@ -164,9 +133,9 @@ class _AppShellState extends State<AppShell> {
                 if (newHabit == null) return;
 
                 setState(() {
-                  _habits.add(newHabit);
-                  _completed.add(false);
+                  _progress.addHabit(newHabit);
                 });
+                widget.onProgressChanged();
                 _showActionSnackBar('Quest created successfully!');
               },
               icon: const Icon(Icons.add),
@@ -228,10 +197,14 @@ class _AppShellState extends State<AppShell> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('HabitQuest', style: textTheme.titleLarge),
+                        Text(
+                          widget.account.displayName,
+                          style: textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const SizedBox(height: 3),
                         Text(
-                          'Build better habits',
+                          'Level ${_progress.level} · ${_progress.totalXp} XP',
                           style: textTheme.bodyMedium?.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
@@ -286,18 +259,56 @@ class _AppShellState extends State<AppShell> {
                 },
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                leading: const Icon(Icons.logout_rounded),
+                title: const Text('Sign out'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmSignOut();
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  Future<void> _confirmSignOut() async {
+    final shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: Text(
+          'Your progress is saved to ${widget.account.displayName}\'s account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (shouldSignOut == true) widget.onSignOut();
+  }
+
   void _updateCompletion(int index, bool isComplete) {
     if (index < 0 || index >= _completed.length) return;
 
     setState(() {
-      _completed[index] = isComplete;
+      _progress.setCompletion(index, isComplete, DateTime.now());
     });
+    widget.onProgressChanged();
   }
 
   void _showActionSnackBar(String message) {

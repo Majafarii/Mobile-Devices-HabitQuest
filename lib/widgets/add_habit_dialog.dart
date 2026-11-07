@@ -84,6 +84,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   initialValue: _frequency,
+                  isExpanded: true,
                   decoration: _fieldDecoration(
                     context,
                     label: 'Frequency',

@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
+import '../models/user_progress.dart';
 import '../theme/app_colors.dart';
 
-/// Home tab content populated with demo data until real habit data is connected.
+/// Home tab: today's quests and level progress for the signed-in account.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
+    required this.progress,
     required this.habits,
     required this.completed,
     required this.onCompletionChanged,
     required this.onHabitTap,
   });
 
+  final UserProgress progress;
   final List<Habit> habits;
   final List<bool> completed;
   final void Function(int index, bool isComplete) onCompletionChanged;
@@ -43,7 +46,7 @@ class HomeScreen extends StatelessWidget {
                     vertical: 6,
                   ),
                   child: Text(
-                    'DEMO DATA',
+                    '${progress.completedTodayCount}/${habits.length} TODAY',
                     style: textTheme.labelSmall?.copyWith(
                       color: colors.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
@@ -91,16 +94,31 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Icon(Icons.stars_rounded, color: AppColors.pink),
                 const SizedBox(width: 8),
-                Text('Level 4', style: textTheme.titleLarge),
-                const Spacer(),
-                Text('1,250 / 1,800 XP', style: textTheme.labelMedium),
+                Expanded(
+                  child: Text(
+                    'Level ${progress.level}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleLarge,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '${progress.xpIntoLevel} / ${UserProgress.xpPerLevel} XP',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: textTheme.labelMedium,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: LinearProgressIndicator(
-                value: 0.69,
+                value: progress.levelProgress,
                 minHeight: 9,
                 color: AppColors.pink,
                 backgroundColor: colors.primaryContainer,
