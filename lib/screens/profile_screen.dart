@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// Profile and preference controls populated with demo account details.
+import '../models/user_account.dart';
+import '../models/user_progress.dart';
+
+/// Profile, stats and preference controls for the signed-in account.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
+    required this.account,
+    required this.progress,
     required this.isDarkMode,
     required this.demoNotificationsEnabled,
     required this.textScaleFactor,
     required this.onDarkModeChanged,
     required this.onDemoNotificationsChanged,
     required this.onTextScaleFactorChanged,
+    required this.onSignOut,
   });
 
+  final UserAccount account;
+  final UserProgress progress;
+  final VoidCallback onSignOut;
   final bool isDarkMode;
   final bool demoNotificationsEnabled;
   final double textScaleFactor;
@@ -49,12 +58,15 @@ class ProfileScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Alex Morgan', style: textTheme.titleLarge),
+                        Text(account.displayName, style: textTheme.titleLarge),
                         const SizedBox(height: 3),
-                        Text('DEMO USER', style: textTheme.labelSmall),
+                        Text(
+                          '@${account.username}',
+                          style: textTheme.labelSmall,
+                        ),
                         const SizedBox(height: 7),
                         Text(
-                          'Level 4 - Sample level',
+                          'Level ${progress.level} · ${progress.totalXp} XP',
                           style: textTheme.bodyMedium,
                         ),
                       ],
@@ -72,21 +84,34 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.email_outlined),
-                  title: const Text('Email (demo)'),
-                  subtitle: const Text('alex.morgan@example.com'),
+                  title: const Text('Email'),
+                  subtitle: Text(
+                    account.email.isEmpty ? 'Not provided' : account.email,
+                  ),
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
-                  leading: const Icon(Icons.cloud_off_outlined),
-                  title: const Text('Sync status'),
-                  subtitle: const Text('Not connected'),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Text(
-                    'Authentication and Firebase synchronization are not yet implemented.',
-                    style: textTheme.bodySmall,
+                  leading: const Icon(Icons.emoji_events_outlined),
+                  title: const Text('Quests completed'),
+                  subtitle: Text(
+                    '${progress.totalCompletions} total · '
+                    'longest streak ${progress.longestStreak} days',
                   ),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.phone_android_outlined),
+                  title: const Text('Storage'),
+                  subtitle: const Text('Saved on this device'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: Icon(Icons.logout_rounded, color: colors.error),
+                  title: Text(
+                    'Sign out',
+                    style: TextStyle(color: colors.error),
+                  ),
+                  onTap: onSignOut,
                 ),
               ],
             ),

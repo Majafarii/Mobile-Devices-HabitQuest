@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
-import '../services/xp_engine.dart';
+import '../models/user_account.dart';
+import '../models/user_progress.dart';
 import '../services/achievement_engine.dart';
 import '../services/progress_tracker.dart';
+import '../services/xp_engine.dart';
 import '../widgets/add_habit_dialog.dart';
 import 'achievements_screen.dart';
 import 'home_screen.dart';
@@ -11,18 +13,22 @@ import 'profile_screen.dart';
 import 'progress_screen.dart';
 import 'quest_detail_screen.dart';
 
-/// Manages the main navigation, habits, and gamification state.
+/// Main navigation for the signed-in account and its persisted progress.
 class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
-    required this.isDarkMode,
-    required this.textScaleFactor,
+    required this.account,
+    required this.progress,
+    required this.onProgressChanged,
+    required this.onSignOut,
     required this.onDarkModeChanged,
     required this.onTextScaleFactorChanged,
   });
 
-  final bool isDarkMode;
-  final double textScaleFactor;
+  final UserAccount account;
+  final UserProgress progress;
+  final VoidCallback onProgressChanged;
+  final VoidCallback onSignOut;
   final ValueChanged<bool> onDarkModeChanged;
   final ValueChanged<double> onTextScaleFactorChanged;
 
@@ -32,65 +38,21 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
-  bool _demoNotificationsEnabled = false;
-
-  late final List<bool> _completed;
-
-  // XP and progress tracking.
   final XpEngine _xpEngine = XpEngine();
-  final List<CompletionRecord> _completionRecords = [];
 
-  // IDs prevent XP from being assigned to the wrong habit.
-  late final List<String> _habitIds;
-  int _nextHabitId = 0;
+  UserProgress get _progress => widget.progress;
+  List<Habit> get _habits => _progress.habits;
+  List<bool> get _completed => _progress.completedToday;
 
-  final List<Habit> _habits = [
-    const Habit(
-      name: 'Drink Water',
-      category: 'Wellness',
-      description:
-          'Keep a water bottle nearby and stay hydrated throughout the day.',
-      frequency: 'Daily',
-      streak: 3,
-      weeklyCompletions: [true, true, false, true, true, false, true],
-    ),
-    const Habit(
-      name: 'Study 1 Hour',
-      category: 'Learning',
-      description:
-          'Spend one focused hour reviewing coursework or class notes.',
-      frequency: 'Daily',
-      streak: 5,
-      weeklyCompletions: [true, true, true, true, false, true, false],
-    ),
-    const Habit(
-      name: 'Morning Workout',
-      category: 'Fitness',
-      description:
-          'Make time for a short workout to start the morning with energy.',
-      frequency: 'Daily',
-      streak: 2,
-      weeklyCompletions: [false, true, true, false, true, false, false],
-    ),
-    const Habit(
-      name: 'Read 20 Minutes',
-      category: 'Reading',
-      description:
-          'Read a book or other useful material for at least 20 minutes.',
-      frequency: 'Daily',
-      streak: 7,
-      weeklyCompletions: [true, true, true, true, true, true, true],
-    ),
+  List<CompletionRecord> get _completionRecords => [
+    for (final record in _progress.completionHistory)
+      CompletionRecord(
+        id: record.id,
+        habitName: record.habitName,
+        completedAt: record.completedAt,
+        xpEarned: record.xpEarned,
+      ),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-
-    _completed = List<bool>.filled(_habits.length, false, growable: true);
-
-    _habitIds = List.generate(_habits.length, (_) => 'habit-${_nextHabitId++}');
-  }
 
   static const _tabs = [
     _TabInfo(title: 'Home', icon: Icons.home_outlined),
@@ -100,16 +62,36 @@ class _AppShellState extends State<AppShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    var idsChanged = false;
+    final usedIds = <String>{};
+    for (var index = 0; index < _habits.length; index++) {
+      final habit = _habits[index];
+      final id = habit.id;
+      if (id == null || id.isEmpty || !usedIds.add(id)) {
+        final generatedId = _newHabitId(index);
+        _habits[index] = habit.copyWith(id: generatedId);
+        usedIds.add(generatedId);
+        idsChanged = true;
+      }
+    }
+
+    for (final completion in _progress.completionHistory) {
+      _xpEngine.awardQuest(completion.id, xp: completion.xpEarned);
+    }
+    if (idsChanged) widget.onProgressChanged();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: _selectedIndex == 0 ? null : const Text('HabitQuest'),
       ),
       drawer: _buildDrawer(context),
-
-      // Display the selected screen.
       body: _buildSelectedScreen(context),
-
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
               onPressed: _addHabit,
@@ -117,13 +99,10 @@ class _AppShellState extends State<AppShell> {
               label: const Text('Add Habit'),
             )
           : null,
-
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          setState(() => _selectedIndex = index);
         },
         destinations: [
           for (final tab in _tabs)
@@ -133,188 +112,181 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  // Builds the selected tab and provides its required data.
   Widget _buildSelectedScreen(BuildContext context) {
     switch (_selectedIndex) {
       case 0:
         return HomeScreen(
+          progress: _progress,
           habits: _habits,
           completed: _completed,
           xpEngine: _xpEngine,
-          onCompletionChanged: (index, isComplete) {
-            final previousXp = _xpEngine.totalXp;
-
-            _updateCompletion(index, isComplete);
-
-            final xpDifference = _xpEngine.totalXp - previousXp;
-
-            if (xpDifference > 0) {
-              _showActionSnackBar('Quest completed! +$xpDifference XP');
-            } else if (xpDifference < 0) {
-              _showActionSnackBar('Quest marked incomplete. $xpDifference XP');
-            } else {
-              _showActionSnackBar(
-                isComplete
-                    ? 'Quest already rewarded today'
-                    : 'Quest marked incomplete',
-              );
-            }
-          },
+          onCompletionChanged: _onHomeCompletionChanged,
           onHabitTap: _openHabitDetails,
         );
-
       case 1:
-        // Live Progress Dashboard integration.
-        return ProgressScreen(xpEngine: _xpEngine, records: _completionRecords);
-
-      case 2:
-        // Evaluate achievements using actual XP and completions.
-        // Historical streak data is not yet available.
-        final achievementProgress = AchievementProgress(
-          totalCompletions: _completionRecords.length,
-          level: _xpEngine.level,
-          longestStreak: 0,
-          hasPerfectWeek: false,
+        return ProgressScreen(
+          progress: _progress,
+          xpEngine: _xpEngine,
+          records: _completionRecords,
         );
-
-        return AchievementsScreen(progress: achievementProgress);
-
+      case 2:
+        final achievements = AchievementProgress(
+          totalCompletions: _progress.totalCompletions,
+          level: _xpEngine.level,
+          longestStreak: _progress.longestStreak,
+          hasPerfectWeek:
+              _progress.habits.isNotEmpty &&
+              _progress.habits.every(
+                (habit) => habit.weeklyCompletions.every((day) => day),
+              ),
+        );
+        return AchievementsScreen(progress: achievements);
       case 3:
         return ProfileScreen(
-          isDarkMode: widget.isDarkMode,
-          demoNotificationsEnabled: _demoNotificationsEnabled,
-          textScaleFactor: widget.textScaleFactor,
+          account: widget.account,
+          progress: _progress,
+          isDarkMode: _progress.isDarkMode,
+          demoNotificationsEnabled: _progress.notificationsEnabled,
+          textScaleFactor: _progress.textScaleFactor,
           onDarkModeChanged: widget.onDarkModeChanged,
-          onDemoNotificationsChanged: (isEnabled) {
-            setState(() {
-              _demoNotificationsEnabled = isEnabled;
-            });
+          onDemoNotificationsChanged: (enabled) {
+            setState(() => _progress.notificationsEnabled = enabled);
+            widget.onProgressChanged();
           },
           onTextScaleFactorChanged: widget.onTextScaleFactorChanged,
+          onSignOut: _confirmSignOut,
         );
-
       default:
         return const SizedBox.shrink();
     }
   }
 
-  // Opens the quest detail page.
-  Future<void> _openHabitDetails(Habit habit) async {
-    final habitIndex = _habits.indexOf(habit);
-    if (habitIndex < 0) return;
+  void _onHomeCompletionChanged(int index, bool isComplete) {
+    if (index < 0 || index >= _habits.length) return;
+    final before = _xpEngine.totalXp;
+    _updateCompletion(index, isComplete);
+    final change = _xpEngine.totalXp - before;
 
-    // Capture the ID so edits do not target a different habit.
-    final habitId = _habitIds[habitIndex];
+    if (change > 0) {
+      _showActionSnackBar('Quest completed! +$change XP');
+    } else if (change < 0) {
+      _showActionSnackBar('Quest marked incomplete. $change XP');
+    } else {
+      _showActionSnackBar(
+        isComplete ? 'Quest already rewarded today' : 'Quest marked incomplete',
+      );
+    }
+  }
+
+  Future<void> _openHabitDetails(Habit habit) async {
+    final initialIndex = _habits.indexOf(habit);
+    if (initialIndex < 0) return;
+    final habitId = _habits[initialIndex].id;
+    if (habitId == null) return;
 
     final deletedHabit = await Navigator.push<Habit>(
       context,
       MaterialPageRoute<Habit>(
         builder: (context) => QuestDetailScreen(
           habit: habit,
-          isCompleted: _completed[habitIndex],
-
+          isCompleted: _completed[initialIndex],
           onCompletionChanged: (isComplete) {
-            final currentIndex = _habitIds.indexOf(habitId);
-
-            if (currentIndex >= 0) {
-              _updateCompletion(currentIndex, isComplete);
-            }
+            final index = _indexOfHabitId(habitId);
+            if (index < 0) return habit;
+            _updateCompletion(index, isComplete);
+            return _habits[index];
           },
-
           onHabitUpdated: (updatedHabit) {
-            if (!mounted) return;
-
-            final currentIndex = _habitIds.indexOf(habitId);
-            if (currentIndex < 0) return;
-
-            setState(() {
-              _habits[currentIndex] = updatedHabit;
-            });
+            final index = _indexOfHabitId(habitId);
+            if (!mounted || index < 0) return;
+            setState(() => _habits[index] = updatedHabit);
+            widget.onProgressChanged();
           },
         ),
       ),
     );
 
     if (!mounted || deletedHabit == null) return;
-
-    // Delete the correct habit even if it was edited.
-    final deletedIndex = _habitIds.indexOf(habitId);
+    final deletedIndex = _indexOfHabitId(habitId);
     if (deletedIndex < 0) return;
 
-    setState(() {
-      _habits.removeAt(deletedIndex);
-      _completed.removeAt(deletedIndex);
-      _habitIds.removeAt(deletedIndex);
-    });
-
+    setState(() => _progress.removeHabitAt(deletedIndex));
+    widget.onProgressChanged();
     _showActionSnackBar('Quest deleted');
   }
 
-  // Adds a newly created habit.
   Future<void> _addHabit() async {
     final newHabit = await showDialog<Habit>(
       context: context,
       builder: (context) => const AddHabitDialog(),
     );
-
     if (!mounted || newHabit == null) return;
 
     setState(() {
-      _habits.add(newHabit);
-      _completed.add(false);
-      _habitIds.add('habit-${_nextHabitId++}');
+      _progress.addHabit(newHabit.copyWith(id: _newHabitId(_habits.length)));
     });
-
+    widget.onProgressChanged();
     _showActionSnackBar('Quest created successfully!');
   }
 
-  // Awards XP and creates completion records.
   void _updateCompletion(int index, bool isComplete) {
-    if (index < 0 || index >= _completed.length) {
+    if (index < 0 || index >= _habits.length || index >= _completed.length) {
       return;
     }
-
-    // Do not process an unchanged completion state.
-    if (_completed[index] == isComplete) {
-      return;
-    }
+    if (_completed[index] == isComplete) return;
 
     final habit = _habits[index];
     final now = DateTime.now();
-    final xpEarned = habit.xpReward > 0 ? habit.xpReward : _xpEngine.xpPerQuest;
-
-    final completionId =
-        '${_habitIds[index]}-${now.year}-${now.month}-${now.day}';
+    final habitId = habit.id ?? 'habit-$index';
+    final completionId = '$habitId-${now.year}-${now.month}-${now.day}';
+    final reward = habit.xpReward > 0 ? habit.xpReward : _xpEngine.xpPerQuest;
 
     setState(() {
-      _completed[index] = isComplete;
-
+      _progress.setCompletion(
+        index,
+        isComplete,
+        now,
+        xpEarned: reward,
+        completionId: completionId,
+      );
       if (isComplete) {
-        // Award XP only once per completion ID.
-        final awarded = _xpEngine.awardQuest(completionId, xp: xpEarned);
-
-        if (awarded) {
-          _completionRecords.add(
-            CompletionRecord(
-              id: completionId,
-              habitName: habit.name,
-              completedAt: now,
-              xpEarned: xpEarned,
-            ),
-          );
-        }
+        _xpEngine.awardQuest(completionId, xp: reward);
       } else {
-        // Undo XP if the quest is marked incomplete.
-        final removed = _xpEngine.undoQuest(completionId);
-
-        if (removed) {
-          _completionRecords.removeWhere((record) => record.id == completionId);
-        }
+        _xpEngine.undoQuest(completionId);
       }
     });
+    widget.onProgressChanged();
   }
 
-  // Builds the side navigation drawer.
+  int _indexOfHabitId(String id) =>
+      _habits.indexWhere((habit) => habit.id == id);
+
+  String _newHabitId(int index) =>
+      '${widget.account.username}-${DateTime.now().microsecondsSinceEpoch}-$index';
+
+  Future<void> _confirmSignOut() async {
+    final shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: Text(
+          'Your progress is saved to ${widget.account.displayName}\'s account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (shouldSignOut == true) widget.onSignOut();
+  }
+
   Widget _buildDrawer(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -355,10 +327,14 @@ class _AppShellState extends State<AppShell> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('HabitQuest', style: textTheme.titleLarge),
+                        Text(
+                          widget.account.displayName,
+                          style: textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const SizedBox(height: 3),
                         Text(
-                          'Build better habits',
+                          'Level ${_xpEngine.level} · ${_xpEngine.totalXp} XP',
                           style: textTheme.bodyMedium?.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
@@ -369,7 +345,6 @@ class _AppShellState extends State<AppShell> {
                 ],
               ),
             ),
-
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -385,21 +360,17 @@ class _AppShellState extends State<AppShell> {
                       leading: Icon(_tabs[index].icon),
                       title: Text(_tabs[index].title),
                       onTap: () {
-                        setState(() {
-                          _selectedIndex = index;
-                        });
+                        setState(() => _selectedIndex = index);
                         Navigator.pop(context);
                       },
                     ),
                 ],
               ),
             ),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Divider(),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: ListTile(
@@ -409,10 +380,22 @@ class _AppShellState extends State<AppShell> {
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('Settings'),
                 onTap: () {
-                  setState(() {
-                    _selectedIndex = 3;
-                  });
+                  setState(() => _selectedIndex = 3);
                   Navigator.pop(context);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                leading: const Icon(Icons.logout_rounded),
+                title: const Text('Sign out'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmSignOut();
                 },
               ),
             ),
@@ -422,10 +405,8 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  // Shows confirmation messages to the user.
   void _showActionSnackBar(String message) {
     final messenger = ScaffoldMessenger.of(context);
-
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));

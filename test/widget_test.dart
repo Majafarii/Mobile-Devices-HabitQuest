@@ -1,12 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habitquest/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Uses a tall phone-sized viewport so lazily built lists show every quest.
+void usePhoneViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1290, 2796);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+}
+
+/// Launches the app on a fresh device and creates an account through the UI.
+Future<void> pumpSignedIn(
+  WidgetTester tester, {
+  String username = 'tester',
+  String displayName = 'Test User',
+  String password = 'secret123',
+}) async {
+  usePhoneViewport(tester);
+  await tester.pumpWidget(const HabitQuestApp());
+  await tester.pumpAndSettle();
+  await signUpThroughUi(
+    tester,
+    username: username,
+    displayName: displayName,
+    password: password,
+  );
+}
+
+Future<void> signUpThroughUi(
+  WidgetTester tester, {
+  required String username,
+  required String displayName,
+  required String password,
+}) async {
+  await tester.tap(find.text("Don't have an account? Sign up"));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('auth.username')), username);
+  await tester.enterText(
+    find.byKey(const Key('auth.displayName')),
+    displayName,
+  );
+  await tester.enterText(find.byKey(const Key('auth.password')), password);
+  await tester.enterText(
+    find.byKey(const Key('auth.confirmPassword')),
+    password,
+  );
+  await tester.ensureVisible(find.byKey(const Key('auth.submit')));
+  await tester.tap(find.byKey(const Key('auth.submit')));
+  await tester.pumpAndSettle();
+}
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('HabitQuest opens on Home and switches between all tabs', (
     tester,
   ) async {
-    await tester.pumpWidget(const HabitQuestApp());
+    await pumpSignedIn(tester);
 
     expect(find.text('HabitQuest'), findsWidgets);
     expect(find.text("Today's Quests"), findsOneWidget);
@@ -22,7 +75,12 @@ void main() {
     final tabTitles = ['Home', 'Progress', 'Achievements', 'Profile'];
 
     for (var index = 0; index < tabIcons.length; index++) {
-      await tester.tap(find.byIcon(tabIcons[index]));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(tabIcons[index]),
+        ),
+      );
       await tester.pumpAndSettle();
 
       if (index == 0) {
@@ -35,13 +93,8 @@ void main() {
         expect(find.text('0 of 6 badges unlocked'), findsOneWidget);
         expect(find.text('Perfect Week'), findsOneWidget);
       } else if (index == 3) {
-        expect(find.text('Alex Morgan'), findsOneWidget);
-        expect(
-          find.text(
-            'Authentication and Firebase synchronization are not yet implemented.',
-          ),
-          findsOneWidget,
-        );
+        expect(find.text('Test User'), findsOneWidget);
+        expect(find.text('Saved on this device'), findsOneWidget);
 
         await tester.drag(find.byType(ListView).last, const Offset(0, -450));
         await tester.pumpAndSettle();
@@ -75,14 +128,14 @@ void main() {
   testWidgets('drawer and bottom navigation share the selected destination', (
     tester,
   ) async {
-    await tester.pumpWidget(const HabitQuestApp());
+    await pumpSignedIn(tester);
 
     final destinations = ['Home', 'Progress', 'Achievements', 'Profile'];
     final contentChecks = [
       "Today's Quests",
       '0 total XP',
       '0 of 6 badges unlocked',
-      'Alex Morgan',
+      'Test User',
     ];
 
     for (var index = 0; index < destinations.length; index++) {
@@ -125,22 +178,17 @@ void main() {
   testWidgets(
     'drawer Settings opens Profile and applies app-wide preferences',
     (tester) async {
-      await tester.pumpWidget(const HabitQuestApp());
+      await pumpSignedIn(tester);
 
       await tester.tap(find.byTooltip('Open navigation menu'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Settings'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Alex Morgan'), findsOneWidget);
+      expect(find.text('Test User'), findsOneWidget);
       expect(
         tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
         3,
-      );
-      await tester.scrollUntilVisible(
-        find.text('Notifications'),
-        250,
-        scrollable: find.byType(Scrollable).last,
       );
       expect(
         find.text(
@@ -165,9 +213,7 @@ void main() {
       await tester.tap(find.text('Large').last);
       await tester.pumpAndSettle();
 
-      final profileText = find.text('Alex Morgan');
-      await tester.drag(find.byType(Scrollable).last, const Offset(0, 600));
-      await tester.pumpAndSettle();
+      final profileText = find.text('Text size');
       expect(
         MediaQuery.textScalerOf(tester.element(profileText)).scale(10),
         12,
@@ -175,11 +221,7 @@ void main() {
       expect(tester.takeException(), isNull);
 
       final darkThemeTile = find.widgetWithText(SwitchListTile, 'Dark theme');
-      await tester.scrollUntilVisible(
-        darkThemeTile,
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
+      await tester.ensureVisible(darkThemeTile);
       await tester.pumpAndSettle();
       await tester.tap(darkThemeTile);
       await tester.pumpAndSettle();
@@ -206,11 +248,6 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Profile'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Notifications'),
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
       expect(
         tester
             .widget<SwitchListTile>(
@@ -242,23 +279,18 @@ void main() {
   testWidgets(
     'quest completion toggles independently and persists across tabs',
     (tester) async {
-      await tester.pumpWidget(const HabitQuestApp());
+      await pumpSignedIn(tester);
 
-      Finder checkboxForHabit(String habitName) => find.descendant(
-        of: find.ancestor(
-          of: find.text(habitName),
-          matching: find.byType(ListTile),
-        ),
+      Finder checkboxForHabit(String name) => find.descendant(
+        of: find.ancestor(of: find.text(name), matching: find.byType(ListTile)),
         matching: find.byType(Checkbox),
       );
 
-      await tester.scrollUntilVisible(
-        find.text('Drink Water'),
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
       var firstCheckbox = checkboxForHabit('Drink Water');
+      final secondCheckbox = checkboxForHabit('Study 1 Hour');
+
       expect(tester.widget<Checkbox>(firstCheckbox).value, isFalse);
+      expect(tester.widget<Checkbox>(secondCheckbox).value, isFalse);
 
       await tester.ensureVisible(firstCheckbox);
       await tester.pumpAndSettle();
@@ -266,64 +298,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.widget<Checkbox>(firstCheckbox).value, isTrue);
-      expect(find.text('Quest completed! +50 XP'), findsOneWidget);
-
-      await tester.scrollUntilVisible(
-        find.text('Study 1 Hour'),
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
-      final secondCheckbox = checkboxForHabit('Study 1 Hour');
       expect(tester.widget<Checkbox>(secondCheckbox).value, isFalse);
+      expect(find.text('Quest completed! +25 XP'), findsOneWidget);
 
-      await tester.scrollUntilVisible(
-        find.text('Drink Water'),
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
-      firstCheckbox = checkboxForHabit('Drink Water');
-      await tester.ensureVisible(firstCheckbox);
-      await tester.pumpAndSettle();
       await tester.tap(firstCheckbox);
       await tester.pumpAndSettle();
       expect(tester.widget<Checkbox>(firstCheckbox).value, isFalse);
-      expect(find.text('Quest marked incomplete. -50 XP'), findsOneWidget);
+      expect(find.text('Quest marked incomplete. -25 XP'), findsOneWidget);
 
-      await tester.scrollUntilVisible(
-        find.text('Drink Water'),
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
       firstCheckbox = checkboxForHabit('Drink Water');
-      await tester.ensureVisible(firstCheckbox);
-      await tester.pumpAndSettle();
       await tester.tap(firstCheckbox);
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.insights_outlined));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Progress'),
+        ),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('50 total XP'), findsOneWidget);
+      expect(find.text('25 total XP'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('1 total'),
         250,
         scrollable: find.byType(Scrollable).last,
       );
       expect(find.text('1 total'), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.home_outlined));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Home'),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Drink Water'),
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
       expect(
         tester.widget<Checkbox>(checkboxForHabit('Drink Water')).value,
         isTrue,
-      );
-      await tester.scrollUntilVisible(
-        find.text('Study 1 Hour'),
-        250,
-        scrollable: find.byType(Scrollable).last,
       );
       expect(
         tester.widget<Checkbox>(checkboxForHabit('Study 1 Hour')).value,
@@ -336,7 +346,7 @@ void main() {
   testWidgets('quest completion stays in sync between Home and details', (
     tester,
   ) async {
-    await tester.pumpWidget(const HabitQuestApp());
+    await pumpSignedIn(tester);
 
     final homeCheckbox = find.byType(Checkbox).at(0);
     await tester.ensureVisible(homeCheckbox);
@@ -365,7 +375,7 @@ void main() {
   testWidgets('deleting quests confirms first and shows the empty state', (
     tester,
   ) async {
-    await tester.pumpWidget(const HabitQuestApp());
+    await pumpSignedIn(tester);
 
     await tester.scrollUntilVisible(
       find.text('Drink Water'),
@@ -375,19 +385,9 @@ void main() {
     await tester.tap(find.text('Drink Water'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Quest Details'), findsOneWidget);
-    final deleteQuestButton = find.widgetWithText(
-      ElevatedButton,
-      'Delete Quest',
-    );
-    await tester.scrollUntilVisible(
-      deleteQuestButton,
-      250,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+    await tester.ensureVisible(find.text('Delete Quest'));
     await tester.pumpAndSettle();
-    await tester.tap(deleteQuestButton);
+    await tester.tap(find.text('Delete Quest'));
     await tester.pumpAndSettle();
     expect(find.text('Delete quest?'), findsOneWidget);
 
@@ -418,19 +418,9 @@ void main() {
       await tester.tap(find.text(habitName));
       await tester.pumpAndSettle();
 
-      expect(find.text('Quest Details'), findsOneWidget);
-      final deleteQuestButton = find.widgetWithText(
-        ElevatedButton,
-        'Delete Quest',
-      );
-      await tester.scrollUntilVisible(
-        deleteQuestButton,
-        250,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+      await tester.ensureVisible(find.text('Delete Quest'));
       await tester.pumpAndSettle();
-      await tester.tap(deleteQuestButton);
+      await tester.tap(find.text('Delete Quest'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
       await tester.pumpAndSettle();

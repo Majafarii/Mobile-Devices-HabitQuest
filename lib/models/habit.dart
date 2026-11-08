@@ -1,6 +1,4 @@
-import 'dart:convert';
-
-/// Habit data model with serialization for local storage persistence.
+/// A single habit (quest) tracked by a user.
 class Habit {
   const Habit({
     required this.name,
@@ -30,6 +28,8 @@ class Habit {
   final String? reminderTime;
   final int streak;
   final int xpReward;
+
+  /// Completion flags for the current week, Monday first.
   final List<bool> weeklyCompletions;
 
   Habit copyWith({
@@ -56,38 +56,38 @@ class Habit {
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id ?? name,
-      'name': name,
-      'category': category,
-      'description': description,
-      'frequency': frequency,
-      'reminderTime': reminderTime,
-      'streak': streak,
-      'xpReward': xpReward,
-      'weeklyCompletions': weeklyCompletions,
-    };
-  }
+  Map<String, dynamic> toMap() => toJson();
 
-  factory Habit.fromMap(Map<String, dynamic> map) {
+  Map<String, dynamic> toJson() => {
+    'id': id ?? name,
+    'name': name,
+    'category': category,
+    'description': description,
+    'frequency': frequency,
+    'reminderTime': reminderTime,
+    'streak': streak,
+    'xpReward': xpReward,
+    'weeklyCompletions': weeklyCompletions,
+  };
+
+  factory Habit.fromMap(Map<String, dynamic> map) => Habit.fromJson(map);
+
+  factory Habit.fromJson(Map<String, dynamic> json) {
+    final weekly = (json['weeklyCompletions'] as List<dynamic>? ?? const [])
+        .map((value) => value == true)
+        .toList();
     return Habit(
-      id: map['id'] as String?,
-      name: map['name'] as String? ?? '',
-      category: map['category'] as String? ?? 'General',
-      description: map['description'] as String? ?? '',
-      frequency: map['frequency'] as String? ?? 'Daily',
-      reminderTime: map['reminderTime'] as String?,
-      streak: (map['streak'] as num?)?.toInt() ?? 0,
-      xpReward: (map['xpReward'] as num?)?.toInt() ?? 50,
-      weeklyCompletions: map['weeklyCompletions'] != null
-          ? List<bool>.from(map['weeklyCompletions'] as List)
-          : const [false, false, false, false, false, false, false],
+      id: json['id'] as String?,
+      name: json['name'] as String? ?? 'Untitled quest',
+      category: json['category'] as String? ?? 'General',
+      description: json['description'] as String? ?? '',
+      frequency: json['frequency'] as String? ?? 'Daily',
+      reminderTime: json['reminderTime'] as String?,
+      streak: (json['streak'] as num?)?.toInt() ?? 0,
+      xpReward: (json['xpReward'] as num?)?.toInt() ?? 50,
+      weeklyCompletions: weekly.length == 7
+          ? weekly
+          : List<bool>.filled(7, false),
     );
   }
-
-  String toJson() => json.encode(toMap());
-
-  factory Habit.fromJson(String source) =>
-      Habit.fromMap(json.decode(source) as Map<String, dynamic>);
 }

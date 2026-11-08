@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
+import '../models/user_progress.dart';
 import '../services/xp_engine.dart';
 import '../theme/app_colors.dart';
 
-/// Home tab content populated with demo habits until real data is connected.
+/// Home tab with account quests and live XP progress.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
+    required this.progress,
     required this.habits,
     required this.completed,
     required this.xpEngine,
@@ -15,6 +17,7 @@ class HomeScreen extends StatelessWidget {
     required this.onHabitTap,
   });
 
+  final UserProgress progress;
   final List<Habit> habits;
   final List<bool> completed;
   final XpEngine xpEngine;
@@ -47,7 +50,7 @@ class HomeScreen extends StatelessWidget {
                     vertical: 6,
                   ),
                   child: Text(
-                    'DEMO DATA',
+                    '${progress.completedTodayCount}/${habits.length} TODAY',
                     style: textTheme.labelSmall?.copyWith(
                       color: colors.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
