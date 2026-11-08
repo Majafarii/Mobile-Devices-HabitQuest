@@ -29,10 +29,10 @@ void main() {
         expect(find.text("Today's Quests"), findsOneWidget);
         expect(find.text('Drink Water'), findsOneWidget);
       } else if (index == 1) {
-        expect(find.text('1,250 total XP'), findsOneWidget);
-        expect(find.text('Level 4'), findsOneWidget);
+        expect(find.text('0 total XP'), findsOneWidget);
+        expect(find.text('Level 1'), findsOneWidget);
       } else if (index == 2) {
-        expect(find.text('2 of 6 badges unlocked'), findsOneWidget);
+        expect(find.text('0 of 6 badges unlocked'), findsOneWidget);
         expect(find.text('Perfect Week'), findsOneWidget);
       } else if (index == 3) {
         expect(find.text('Alex Morgan'), findsOneWidget);
@@ -80,8 +80,8 @@ void main() {
     final destinations = ['Home', 'Progress', 'Achievements', 'Profile'];
     final contentChecks = [
       "Today's Quests",
-      '1,250 total XP',
-      '2 of 6 badges unlocked',
+      '0 total XP',
+      '0 of 6 badges unlocked',
       'Alex Morgan',
     ];
 
@@ -266,7 +266,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.widget<Checkbox>(firstCheckbox).value, isTrue);
-      expect(find.text('Quest completed!'), findsOneWidget);
+      expect(find.text('Quest completed! +50 XP'), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.text('Study 1 Hour'),
@@ -287,7 +287,7 @@ void main() {
       await tester.tap(firstCheckbox);
       await tester.pumpAndSettle();
       expect(tester.widget<Checkbox>(firstCheckbox).value, isFalse);
-      expect(find.text('Quest marked incomplete'), findsOneWidget);
+      expect(find.text('Quest marked incomplete. -50 XP'), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.text('Drink Water'),
@@ -301,6 +301,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.insights_outlined));
       await tester.pumpAndSettle();
+      expect(find.text('50 total XP'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('1 total'),
+        250,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('1 total'), findsOneWidget);
       await tester.tap(find.byIcon(Icons.home_outlined));
       await tester.pumpAndSettle();
 

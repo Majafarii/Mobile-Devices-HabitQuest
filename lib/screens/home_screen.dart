@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
+import '../services/xp_engine.dart';
 import '../theme/app_colors.dart';
 
-/// Home tab content populated with demo data until real habit data is connected.
+/// Home tab content populated with demo habits until real data is connected.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
     required this.habits,
     required this.completed,
+    required this.xpEngine,
     required this.onCompletionChanged,
     required this.onHabitTap,
   });
 
   final List<Habit> habits;
   final List<bool> completed;
+  final XpEngine xpEngine;
+
   final void Function(int index, bool isComplete) onCompletionChanged;
   final ValueChanged<Habit> onHabitTap;
 
@@ -61,7 +65,10 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+
+          // Dynamic XP and leveling progress.
           _buildProgressCard(context),
+
           const SizedBox(height: 16),
           _buildQuoteCard(context),
           const SizedBox(height: 24),
@@ -89,18 +96,30 @@ class HomeScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.stars_rounded, color: AppColors.pink),
+                const Icon(Icons.stars_rounded, color: AppColors.pink),
                 const SizedBox(width: 8),
-                Text('Level 4', style: textTheme.titleLarge),
+                Text('Level ${xpEngine.level}', style: textTheme.titleLarge),
                 const Spacer(),
-                Text('1,250 / 1,800 XP', style: textTheme.labelMedium),
+                Flexible(
+                  child: Text(
+                    '${xpEngine.totalXp} total XP',
+                    style: textTheme.labelMedium,
+                    textAlign: TextAlign.end,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
+            Text(
+              '${xpEngine.currentLevelXp} / '
+              '${xpEngine.xpNeededForNextLevel} XP to next level',
+              style: textTheme.labelMedium,
+            ),
+            const SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: LinearProgressIndicator(
-                value: 0.69,
+                value: xpEngine.levelProgress,
                 minHeight: 9,
                 color: AppColors.pink,
                 backgroundColor: colors.primaryContainer,
@@ -150,6 +169,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildHabitCard(BuildContext context, int index) {
     final habit = habits[index];
     final isCompleted = completed[index];
+
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 

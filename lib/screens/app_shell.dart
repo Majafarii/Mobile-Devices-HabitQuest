@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/habit.dart';
+import '../services/xp_engine.dart';
+import '../services/achievement_engine.dart';
+import '../services/progress_tracker.dart';
 import '../widgets/add_habit_dialog.dart';
 import 'achievements_screen.dart';
 import 'home_screen.dart';
@@ -8,7 +11,7 @@ import 'profile_screen.dart';
 import 'progress_screen.dart';
 import 'quest_detail_screen.dart';
 
-/// Owns the app's top-level tab selection and keeps navigation visible.
+/// Manages the main navigation, habits, and gamification state.
 class AppShell extends StatefulWidget {
   const AppShell({
     super.key,
@@ -30,7 +33,17 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
   bool _demoNotificationsEnabled = false;
+
   late final List<bool> _completed;
+
+  // XP and progress tracking.
+  final XpEngine _xpEngine = XpEngine();
+  final List<CompletionRecord> _completionRecords = [];
+
+  // IDs prevent XP from being assigned to the wrong habit.
+  late final List<String> _habitIds;
+  int _nextHabitId = 0;
+
   final List<Habit> _habits = [
     const Habit(
       name: 'Drink Water',
@@ -73,7 +86,10 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+
     _completed = List<bool>.filled(_habits.length, false, growable: true);
+
+    _habitIds = List.generate(_habits.length, (_) => 'habit-${_nextHabitId++}');
   }
 
   static const _tabs = [
@@ -90,89 +106,18 @@ class _AppShellState extends State<AppShell> {
         title: _selectedIndex == 0 ? null : const Text('HabitQuest'),
       ),
       drawer: _buildDrawer(context),
-      body: _selectedIndex == 0
-          ? HomeScreen(
-              habits: _habits,
-              completed: _completed,
-              onCompletionChanged: (index, isComplete) {
-                _updateCompletion(index, isComplete);
-                _showActionSnackBar(
-                  isComplete
-                      ? 'Quest completed!'
-                      : 'Quest marked incomplete',
-                );
-              },
-              onHabitTap: (habit) async {
-                final habitIndex = _habits.indexOf(habit);
-                if (habitIndex < 0) return;
 
-                final deletedHabit = await Navigator.push<Habit>(
-                  context,
-                  MaterialPageRoute<Habit>(
-                    builder: (context) => QuestDetailScreen(
-                      habit: habit,
-                      isCompleted: _completed[habitIndex],
-                      onCompletionChanged: (isComplete) {
-                        _updateCompletion(habitIndex, isComplete);
-                      },
-                      onHabitUpdated: (updatedHabit) {
-                        if (!mounted || habitIndex < 0) return;
-                        setState(() {
-                          _habits[habitIndex] = updatedHabit;
-                        });
-                      },
-                    ),
-                  ),
-                );
-                if (!context.mounted || deletedHabit == null) return;
+      // Display the selected screen.
+      body: _buildSelectedScreen(context),
 
-                final deletedIndex = _habits.indexOf(deletedHabit);
-                if (deletedIndex < 0) return;
-                setState(() {
-                  _habits.removeWhere(
-                    (habitInList) => identical(habitInList, deletedHabit),
-                  );
-                  _completed.removeAt(deletedIndex);
-                });
-                _showActionSnackBar('Quest deleted');
-              },
-            )
-          : _selectedIndex == 1
-          ? const ProgressScreen()
-          : _selectedIndex == 2
-          ? const AchievementsScreen()
-          : ProfileScreen(
-              isDarkMode: widget.isDarkMode,
-              demoNotificationsEnabled: _demoNotificationsEnabled,
-              textScaleFactor: widget.textScaleFactor,
-              onDarkModeChanged: widget.onDarkModeChanged,
-              onDemoNotificationsChanged: (isEnabled) {
-                setState(() {
-                  _demoNotificationsEnabled = isEnabled;
-                });
-              },
-              onTextScaleFactorChanged: widget.onTextScaleFactorChanged,
-            ),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                final newHabit = await showDialog<Habit>(
-                  context: context,
-                  builder: (context) => const AddHabitDialog(),
-                );
-                if (!context.mounted) return;
-                if (newHabit == null) return;
-
-                setState(() {
-                  _habits.add(newHabit);
-                  _completed.add(false);
-                });
-                _showActionSnackBar('Quest created successfully!');
-              },
+              onPressed: _addHabit,
               icon: const Icon(Icons.add),
               label: const Text('Add Habit'),
             )
           : null,
+
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -188,6 +133,188 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  // Builds the selected tab and provides its required data.
+  Widget _buildSelectedScreen(BuildContext context) {
+    switch (_selectedIndex) {
+      case 0:
+        return HomeScreen(
+          habits: _habits,
+          completed: _completed,
+          xpEngine: _xpEngine,
+          onCompletionChanged: (index, isComplete) {
+            final previousXp = _xpEngine.totalXp;
+
+            _updateCompletion(index, isComplete);
+
+            final xpDifference = _xpEngine.totalXp - previousXp;
+
+            if (xpDifference > 0) {
+              _showActionSnackBar('Quest completed! +$xpDifference XP');
+            } else if (xpDifference < 0) {
+              _showActionSnackBar('Quest marked incomplete. $xpDifference XP');
+            } else {
+              _showActionSnackBar(
+                isComplete
+                    ? 'Quest already rewarded today'
+                    : 'Quest marked incomplete',
+              );
+            }
+          },
+          onHabitTap: _openHabitDetails,
+        );
+
+      case 1:
+        // Live Progress Dashboard integration.
+        return ProgressScreen(xpEngine: _xpEngine, records: _completionRecords);
+
+      case 2:
+        // Evaluate achievements using actual XP and completions.
+        // Historical streak data is not yet available.
+        final achievementProgress = AchievementProgress(
+          totalCompletions: _completionRecords.length,
+          level: _xpEngine.level,
+          longestStreak: 0,
+          hasPerfectWeek: false,
+        );
+
+        return AchievementsScreen(progress: achievementProgress);
+
+      case 3:
+        return ProfileScreen(
+          isDarkMode: widget.isDarkMode,
+          demoNotificationsEnabled: _demoNotificationsEnabled,
+          textScaleFactor: widget.textScaleFactor,
+          onDarkModeChanged: widget.onDarkModeChanged,
+          onDemoNotificationsChanged: (isEnabled) {
+            setState(() {
+              _demoNotificationsEnabled = isEnabled;
+            });
+          },
+          onTextScaleFactorChanged: widget.onTextScaleFactorChanged,
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // Opens the quest detail page.
+  Future<void> _openHabitDetails(Habit habit) async {
+    final habitIndex = _habits.indexOf(habit);
+    if (habitIndex < 0) return;
+
+    // Capture the ID so edits do not target a different habit.
+    final habitId = _habitIds[habitIndex];
+
+    final deletedHabit = await Navigator.push<Habit>(
+      context,
+      MaterialPageRoute<Habit>(
+        builder: (context) => QuestDetailScreen(
+          habit: habit,
+          isCompleted: _completed[habitIndex],
+
+          onCompletionChanged: (isComplete) {
+            final currentIndex = _habitIds.indexOf(habitId);
+
+            if (currentIndex >= 0) {
+              _updateCompletion(currentIndex, isComplete);
+            }
+          },
+
+          onHabitUpdated: (updatedHabit) {
+            if (!mounted) return;
+
+            final currentIndex = _habitIds.indexOf(habitId);
+            if (currentIndex < 0) return;
+
+            setState(() {
+              _habits[currentIndex] = updatedHabit;
+            });
+          },
+        ),
+      ),
+    );
+
+    if (!mounted || deletedHabit == null) return;
+
+    // Delete the correct habit even if it was edited.
+    final deletedIndex = _habitIds.indexOf(habitId);
+    if (deletedIndex < 0) return;
+
+    setState(() {
+      _habits.removeAt(deletedIndex);
+      _completed.removeAt(deletedIndex);
+      _habitIds.removeAt(deletedIndex);
+    });
+
+    _showActionSnackBar('Quest deleted');
+  }
+
+  // Adds a newly created habit.
+  Future<void> _addHabit() async {
+    final newHabit = await showDialog<Habit>(
+      context: context,
+      builder: (context) => const AddHabitDialog(),
+    );
+
+    if (!mounted || newHabit == null) return;
+
+    setState(() {
+      _habits.add(newHabit);
+      _completed.add(false);
+      _habitIds.add('habit-${_nextHabitId++}');
+    });
+
+    _showActionSnackBar('Quest created successfully!');
+  }
+
+  // Awards XP and creates completion records.
+  void _updateCompletion(int index, bool isComplete) {
+    if (index < 0 || index >= _completed.length) {
+      return;
+    }
+
+    // Do not process an unchanged completion state.
+    if (_completed[index] == isComplete) {
+      return;
+    }
+
+    final habit = _habits[index];
+    final now = DateTime.now();
+    final xpEarned = habit.xpReward > 0 ? habit.xpReward : _xpEngine.xpPerQuest;
+
+    final completionId =
+        '${_habitIds[index]}-${now.year}-${now.month}-${now.day}';
+
+    setState(() {
+      _completed[index] = isComplete;
+
+      if (isComplete) {
+        // Award XP only once per completion ID.
+        final awarded = _xpEngine.awardQuest(completionId, xp: xpEarned);
+
+        if (awarded) {
+          _completionRecords.add(
+            CompletionRecord(
+              id: completionId,
+              habitName: habit.name,
+              completedAt: now,
+              xpEarned: xpEarned,
+            ),
+          );
+        }
+      } else {
+        // Undo XP if the quest is marked incomplete.
+        final removed = _xpEngine.undoQuest(completionId);
+
+        if (removed) {
+          _completionRecords.removeWhere((record) => record.id == completionId);
+        }
+      }
+    });
+  }
+
+  // Builds the side navigation drawer.
   Widget _buildDrawer(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -242,6 +369,7 @@ class _AppShellState extends State<AppShell> {
                 ],
               ),
             ),
+
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -266,10 +394,12 @@ class _AppShellState extends State<AppShell> {
                 ],
               ),
             ),
+
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Divider(),
             ),
+
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: ListTile(
@@ -292,16 +422,10 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _updateCompletion(int index, bool isComplete) {
-    if (index < 0 || index >= _completed.length) return;
-
-    setState(() {
-      _completed[index] = isComplete;
-    });
-  }
-
+  // Shows confirmation messages to the user.
   void _showActionSnackBar(String message) {
     final messenger = ScaffoldMessenger.of(context);
+
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
