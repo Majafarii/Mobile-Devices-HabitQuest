@@ -52,7 +52,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           children: [
             Text(_habit.name, style: textTheme.headlineLarge),
             const SizedBox(height: 10),
