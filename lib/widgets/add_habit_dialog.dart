@@ -84,6 +84,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   initialValue: _frequency,
+                  isExpanded: true,
                   decoration: _fieldDecoration(
                     context,
                     label: 'Frequency',
@@ -173,6 +174,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
     Navigator.pop(
       context,
       Habit(
+        id: originalHabit?.id,
         name: _nameController.text.trim(),
         category: originalHabit?.category ?? 'General',
         description: _descriptionController.text.trim(),
@@ -181,6 +183,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
             ? null
             : _reminderTimeController.text,
         streak: originalHabit?.streak ?? 0,
+        xpReward: originalHabit?.xpReward ?? 50,
         weeklyCompletions:
             originalHabit?.weeklyCompletions ??
             const [false, false, false, false, false, false, false],
