@@ -67,6 +67,7 @@ Use the following credentials to log into the pre-configured evaluation account:
 
 ## Submission Directory Structure
 
+```text
 Group02_HabitQuest_Part2/
 ├── code/
 │   └── habit_quest/          # Flutter codebase (after running flutter clean)
@@ -75,8 +76,7 @@ Group02_HabitQuest_Part2/
 ├── video/
 │   └── Group02_Demo.mp4      # 100-second 1080p feature walkthrough video
 └── README.md                 # Setup guide, test credentials, and disclosure
-
----
+```
 
 ## Generative AI Disclosure
 
