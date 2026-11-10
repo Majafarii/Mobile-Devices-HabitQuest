@@ -17,10 +17,6 @@ class AuthException implements Exception {
 }
 
 /// Local, on-device account management.
-///
-/// Accounts are saved in shared preferences. Passwords are never stored in
-/// plain text: each one is hashed with its own random salt (iterated
-/// HMAC-SHA256), and sign-in compares hashes.
 class AuthService {
   AuthService(this._prefs);
 
@@ -31,8 +27,12 @@ class AuthService {
 
   final SharedPreferences _prefs;
 
-  static Future<AuthService> create() async =>
-      AuthService(await SharedPreferences.getInstance());
+  /// Factory creator that automatically seeds the demo account if missing.
+  static Future<AuthService> create() async {
+    final service = AuthService(await SharedPreferences.getInstance());
+    await service._ensureDemoAccount();
+    return service;
+  }
 
   /// Username from the most recent successful sign-in, for prefilling.
   String? get lastUsername => _prefs.getString(_lastUsernameKey);
@@ -42,6 +42,26 @@ class AuthService {
     final username = _prefs.getString(_sessionKey);
     if (username == null) return null;
     return _loadAccounts()[username];
+  }
+
+  /// Hard-codes and auto-seeds the demo account into SharedPreferences.
+  Future<void> _ensureDemoAccount() async {
+    final accounts = _loadAccounts();
+    const demoKey = 'demo';
+
+    if (!accounts.containsKey(demoKey)) {
+      final salt = _generateSalt();
+      final demoAccount = UserAccount(
+        username: demoKey,
+        displayName: 'Demo Adventurer',
+        email: 'demo@habitquest.local',
+        passwordHash: _hashPassword('QuestPass123!', salt),
+        salt: salt,
+        createdAt: DateTime.now(),
+      );
+      accounts[demoKey] = demoAccount;
+      await _saveAccounts(accounts);
+    }
   }
 
   Future<UserAccount> signUp({
@@ -84,9 +104,21 @@ class AuthService {
     required String password,
     bool rememberMe = true,
   }) async {
-    final key = normalizeUsername(username);
-    final account = _loadAccounts()[key];
-    // Same message for unknown user and wrong password.
+    final input = username.trim().toLowerCase();
+    final accounts = _loadAccounts();
+
+    // Look up by username first, fallback to matching by email address
+    UserAccount? account = accounts[input];
+    if (account == null) {
+      for (final acc in accounts.values) {
+        if (acc.email.trim().toLowerCase() == input) {
+          account = acc;
+          break;
+        }
+      }
+    }
+
+    // Verify hash
     if (account == null ||
         !_constantTimeEquals(
           _hashPassword(password, account.salt),
@@ -94,7 +126,8 @@ class AuthService {
         )) {
       throw const AuthException('Incorrect username or password.');
     }
-    await _startSession(key, rememberMe);
+
+    await _startSession(account.username, rememberMe);
     return account;
   }
 
