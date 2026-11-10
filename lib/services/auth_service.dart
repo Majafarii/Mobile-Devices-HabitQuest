@@ -24,6 +24,8 @@ class AuthService {
   static const _sessionKey = 'auth.session';
   static const _lastUsernameKey = 'auth.lastUsername';
   static const _hashIterations = 10000;
+  static const demoUsername = 'demo';
+  static const demoPassword = 'QuestPass123!';
 
   final SharedPreferences _prefs;
 
@@ -47,21 +49,25 @@ class AuthService {
   /// Hard-codes and auto-seeds the demo account into SharedPreferences.
   Future<void> _ensureDemoAccount() async {
     final accounts = _loadAccounts();
-    const demoKey = 'demo';
-
-    if (!accounts.containsKey(demoKey)) {
-      final salt = _generateSalt();
-      final demoAccount = UserAccount(
-        username: demoKey,
-        displayName: 'Demo Adventurer',
-        email: 'demo@habitquest.local',
-        passwordHash: _hashPassword('QuestPass123!', salt),
-        salt: salt,
-        createdAt: DateTime.now(),
-      );
-      accounts[demoKey] = demoAccount;
-      await _saveAccounts(accounts);
+    final existing = accounts[demoUsername];
+    if (existing != null &&
+        _constantTimeEquals(
+          _hashPassword(demoPassword, existing.salt),
+          existing.passwordHash,
+        )) {
+      return;
     }
+
+    final salt = existing?.salt ?? _generateSalt();
+    accounts[demoUsername] = UserAccount(
+      username: demoUsername,
+      displayName: 'Demo Adventurer',
+      email: 'demo@habitquest.local',
+      passwordHash: _hashPassword(demoPassword, salt),
+      salt: salt,
+      createdAt: existing?.createdAt ?? DateTime.now(),
+    );
+    await _saveAccounts(accounts);
   }
 
   Future<UserAccount> signUp({

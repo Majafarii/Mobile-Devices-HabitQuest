@@ -34,6 +34,39 @@ void main() {
   });
 
   group('AuthService', () {
+    test('pre-created demo account signs in through regular login', () async {
+      final auth = await AuthService.create();
+
+      final account = await auth.signIn(
+        username: AuthService.demoUsername,
+        password: AuthService.demoPassword,
+      );
+
+      expect(account.displayName, 'Demo Adventurer');
+      expect(auth.restoreSession()?.username, AuthService.demoUsername);
+    });
+
+    test(
+      'restores demo credentials if a conflicting demo account exists',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await AuthService(prefs).signUp(
+          username: AuthService.demoUsername,
+          displayName: 'Other User',
+          email: '',
+          password: 'different-password',
+        );
+
+        final auth = await AuthService.create();
+        final account = await auth.signIn(
+          username: AuthService.demoUsername,
+          password: AuthService.demoPassword,
+        );
+
+        expect(account.displayName, 'Demo Adventurer');
+      },
+    );
+
     test(
       'signs up, rejects duplicates, and never stores the password',
       () async {
@@ -227,5 +260,24 @@ void main() {
     await tester.pumpWidget(const HabitQuestApp());
     await tester.pumpAndSettle();
     expect(find.text("Today's Quests"), findsOneWidget);
+  });
+
+  testWidgets('demo account can be logged into without signing up', (
+    tester,
+  ) async {
+    usePhoneViewport(tester);
+    await tester.pumpWidget(const HabitQuestApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome back! Sign in to continue.'), findsOneWidget);
+    expect(find.text("Don't have an account? Sign up"), findsOneWidget);
+    await signInThroughUi(
+      tester,
+      username: AuthService.demoUsername,
+      password: AuthService.demoPassword,
+    );
+
+    expect(find.text("Today's Quests"), findsOneWidget);
+    expect(find.byKey(const Key('auth.demo')), findsNothing);
   });
 }
